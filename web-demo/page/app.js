@@ -17,6 +17,7 @@ import { createPanel224Operator } from './panel224.js';
 import { createInput } from './input.js';
 import { programKey, selectProgram, readCatalog, fillProgramMenu } from './programs.js';
 import { createParams } from './params.js';
+import { createDmemMap } from './dmem_map.js';
 
 const $ = (id) => document.getElementById(id);
 let m = null, op = null, chips = [], chipModel = 0, romHash = '', booted = false;   // chipModel: 1 = the original 224
@@ -411,19 +412,6 @@ function refreshDisplays() {
   $('audioStatus').textContent = `machine time ${m.time.toFixed(1)} s` +
     (renderMachine ? `, rendering at ${(renderMachine / renderWall).toFixed(1)}x realtime` : '');
 }
-// The delay memory: 65,536 words on the 224X/224XL, the first 16,384 on the 224.
-function drawMemory() {
-  const canvas = $('memory'), g = canvas.getContext('2d');
-  const size = m.api.model(m.handle) === 1 ? 16384 : 65536;
-  const words = new Int16Array(Module.HEAP16.buffer, m.api.memory(m.handle), size);
-  g.clearRect(0, 0, canvas.width, canvas.height);
-  const step = size / canvas.width, mid = canvas.height / 2;
-  for (let x = 0; x < canvas.width; x++) {
-    let lo = 0, hi = 0;
-    for (let i = x * step; i < (x + 1) * step; i++) { lo = Math.min(lo, words[i]); hi = Math.max(hi, words[i]); }
-    g.fillRect(x, mid - hi / 32768 * mid, 1, Math.max(1, (hi - lo) / 32768 * mid));
-  }
-}
 // The running program, as the C++ WCS disassembler reads it with the
 // machine's own decode (../lens/wcs_disassembler.hpp).
 // Which rows the firmware rewrote since the last look (LFOs, slider moves).
@@ -446,6 +434,13 @@ function drawProgram() {
     return x ? `${x[1].padStart(3)}  ${x[2].trimEnd()}` : line.trimEnd();
   }).join('\n');
 }
-setInterval(() => { if (m.handle) { refreshDisplays(); drawMemory(); } }, 250);
+setInterval(() => { if (m.handle) { refreshDisplays(); } }, 250);
+// The delay memory in CPC's frame (dmem_map.js): its words move a sample per
+// pass, so it is drawn on every frame.
+const dmemMap = createDmemMap(Module, m, {
+  schematicCanvas: $('memorySchematic'), trueCanvas: $('memory'), addressCanvas: $('memoryAddress'), info: $('memoryInfo'),
+  wholeMemory: () => $('wholeMemory').checked, setName: () => (chosen ? chosen.name : ''),
+});
+requestAnimationFrame(function frame() { dmemMap.draw(); requestAnimationFrame(frame); });
 setInterval(() => { if (m.handle && m.audioRunning) { drawHeadroom(); drawGains(); } }, 50);
 setInterval(() => { if (m.handle) { drawProgram(); drawRewrites(); } }, 1000);

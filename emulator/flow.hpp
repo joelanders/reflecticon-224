@@ -45,10 +45,50 @@ struct Tap {
     unsigned passes;        // how many passes (samples) ago the value was stored
 };
 
+// Two taps one sample apart whose words go into the same sum with weights
+// that add up to one (32/32): together, one tap at a fractional lag. The
+// firmware's modulation moves these (the weights first, then the taps a
+// sample); some programs also have fixed ones.
+struct FractionalTap {
+    unsigned near_row, far_row;     // the taps at lag L and L + 1
+    unsigned lag32;                 // the lag in 1/32 samples: 32 L + the far tap's weight
+};
+
+// In CPC's frame (addresses are CPC - offset, and CPC steps once per pass)
+// the memory stands still and the words move: a word stored at offset w is
+// at offset w + k after k passes. A line's region runs from its write head,
+// `offset`, to its oldest tap.
 struct DelayLine {
     unsigned write_row;     // the MEMW row
+    uint32_t offset;        // where it writes
     std::vector<Tap> taps;  // the MEMR rows that read it, shortest lag first
+    std::vector<unsigned> feedback;  // lags of the taps its own stored value is made of
+    std::vector<FractionalTap> fractional;
 };
+
+// The offset of the line's oldest tap (its write head if nothing reads it).
+inline uint32_t oldest(const DelayLine &line) {
+    if (line.taps.empty()) {
+        return line.offset;
+    }
+    return line.offset + line.taps.back().passes;
+}
+
+// delay: tapped only; loop: its value is made of its own taps (feedback 1 is
+// a one-pole's state, one lag D > 1 an allpass or a comb); scratch: read
+// back in the same pass only; unread.
+inline const char *line_kind(const DelayLine &line) {
+    if (line.taps.empty()) {
+        return "unread";
+    }
+    if (line.taps.back().passes == 0) {
+        return "scratch";
+    }
+    if (!line.feedback.empty()) {
+        return "loop";
+    }
+    return "delay";
+}
 
 struct Flow {
     Model model = Model::Lexicon224X;
@@ -189,7 +229,7 @@ inline Flow flow(const uint32_t wcs[128], Model model = Model::Lexicon224X) {
     // ---- Delay memory: the latest write to the address each MEMR reads ----
     for (unsigned row = 0; row < n; row++) {
         if (mi[row].op == MEMW) {
-            f.lines.push_back({row, {}});
+            f.lines.push_back({row, offset(mi[row], model), {}, {}, {}});
         }
     }
     for (unsigned r = 0; r < n; r++) {
@@ -223,6 +263,118 @@ inline Flow flow(const uint32_t wcs[128], Model model = Model::Lexicon224X) {
         std::stable_sort(line.taps.begin(), line.taps.end(), [](const Tap &a, const Tap &b) {
             return a.passes < b.passes;
         });
+    }
+
+    // ---- Feedback: the line's own taps that its stored value is made of ----
+    // Back from the store through this pass's links: the XFER that saved the
+    // RR it stores, the rows whose products are in that sum, the rows whose
+    // bus values they multiplied (through keep-shifting), and on through any
+    // bus value that was itself an RR. The MEMR rows reached are what the
+    // value is made of; the walk stops there (unless the read is at lag 0),
+    // and at values from an earlier pass.
+    std::vector<int> result_from(n, -1), operand_from(n, -1);
+    std::vector<LinkKind> operand_kind(n, LinkKind::Register);
+    std::vector<std::vector<unsigned>> products(n);
+    for (const Link &link : f.links) {
+        if (link.earlier_pass) {
+            continue;
+        }
+        if (link.kind == LinkKind::Result) {
+            result_from[link.to] = int(link.from);
+        }
+        if (link.kind == LinkKind::Product) {
+            products[link.to].push_back(link.from);
+        }
+        if (link.kind == LinkKind::Register || link.kind == LinkKind::Shift) {
+            operand_from[link.to] = int(link.from);
+            operand_kind[link.to] = link.kind;
+        }
+    }
+    // A read at lag 0 gets a word stored earlier in this pass: the walk goes on
+    // through that store.
+    std::vector<int> stored_this_pass(n, -1);
+    for (const DelayLine &line : f.lines) {
+        for (const Tap &tap : line.taps) {
+            if (tap.passes == 0) {
+                stored_this_pass[tap.row] = int(line.write_row);
+            }
+        }
+    }
+    for (DelayLine &line : f.lines) {
+        std::vector<bool> read(n, false), seen(n, false);
+        std::vector<unsigned> buses = {line.write_row};   // rows whose bus value is in it
+        while (!buses.empty()) {
+            unsigned row = buses.back();
+            buses.pop_back();
+            if (seen[row]) {
+                continue;
+            }
+            seen[row] = true;
+            if (mi[row].op == MEMR) {
+                read[row] = true;
+                if (stored_this_pass[row] >= 0) {
+                    buses.push_back(unsigned(stored_this_pass[row]));
+                }
+                continue;
+            }
+            if (result_from[row] < 0) {
+                continue;                       // ADC, XREG, nothing, or an earlier pass's RR
+            }
+            for (unsigned product : products[unsigned(result_from[row])]) {
+                unsigned from = product;
+                while (operand_from[from] >= 0 && operand_kind[from] == LinkKind::Shift) {
+                    from = unsigned(operand_from[from]);
+                }
+                if (operand_from[from] >= 0) {
+                    buses.push_back(unsigned(operand_from[from]));
+                }
+            }
+        }
+        for (const Tap &tap : line.taps) {
+            if (read[tap.row] && (line.feedback.empty() || line.feedback.back() != tap.passes)) {
+                line.feedback.push_back(tap.passes);
+            }
+        }
+    }
+
+    // ---- Fractional taps: adjacent taps whose weights add up to 32/32 ----
+    // A tap's weight is the coefficient of a row in this pass that multiplies
+    // its word (a zero weight too: the modulation can take one to 0). The two
+    // products must go into the same sum: no ZERO between them.
+    std::vector<unsigned> sum_of(n, 0);
+    for (unsigned row = 0, sums = 0; row < n; row++) {
+        if (mi[row].zero) {
+            sums++;
+        }
+        sum_of[row] = sums;
+    }
+    std::vector<std::vector<unsigned>> multiplied_by(n);
+    for (unsigned row = 0; row < n; row++) {
+        const Link &link = multiplicand[row];
+        if (has_multiplicand[row] && link.kind == LinkKind::Register && !link.earlier_pass) {
+            multiplied_by[link.from].push_back(row);
+        }
+    }
+    for (DelayLine &line : f.lines) {
+        for (size_t t = 0; t + 1 < line.taps.size(); t++) {
+            const Tap &near = line.taps[t], &far = line.taps[t + 1];
+            if (far.passes != near.passes + 1) {
+                continue;
+            }
+            unsigned matches = 0, far_weight = 0;
+            for (unsigned p : multiplied_by[near.row]) {
+                for (unsigned q : multiplied_by[far.row]) {
+                    if (p != q && sum_of[p] == sum_of[q] && mi[p].negative == mi[q].negative &&
+                        mi[p].coefficient + mi[q].coefficient == 32) {
+                        matches++;
+                        far_weight = mi[q].coefficient;
+                    }
+                }
+            }
+            if (matches == 1) {
+                line.fractional.push_back({near.row, far.row, 32 * near.passes + far_weight});
+            }
+        }
     }
     return f;
 }
@@ -278,6 +430,76 @@ inline MemoryCheck measure_memory(const uint32_t wcs[128], const Flow &f, unsign
                                           "'s write from " + std::to_string(lag) + " passes ago");
         }
     });
+    return check;
+}
+
+// ---- The feedback check: change the word a tap reads and see whether the store changes ----
+
+struct FeedbackCheck {
+    unsigned taps = 0;          // taps tried (lag > 0)
+    unsigned agree = 0;         // ... where the store changed exactly when `feedback` lists the lag
+    std::vector<std::string> disagreements;
+};
+
+// On a machine whose delay memory holds noise: run one pass as it is, then
+// once per tap with the word that tap reads changed, and compare the word
+// the line stores. The change is large (1/4 of full scale), so it survives
+// a chain of small coefficients.
+inline FeedbackCheck measure_feedback(const uint32_t wcs[128], const Flow &f) {
+    auto base = std::make_unique<Machine>();
+    base->model = f.model;
+    for (unsigned row = 0; row < 128; row++) {
+        base->wcs[row] = wcs[row];
+    }
+    uint32_t noise = 12345;
+    for (uint16_t &word : base->memory) {
+        noise = noise * 1103515245 + 12345;
+        word = uint16_t(int16_t((noise >> 16) % 8192) - 4096);
+    }
+    for (unsigned n = 0; n < 3 * f.rows; n++) {
+        step_row(*base);
+    }
+
+    // One pass from `m`: each row's memory address, and the word each MEMW stored.
+    struct Pass {
+        std::vector<uint16_t> address, stored;
+    };
+    auto run = [&f](const Machine &m) {
+        Pass pass{std::vector<uint16_t>(f.rows), std::vector<uint16_t>(f.rows)};
+        for_each_row(m, cpu::RowPhase::Fetch, f.rows, [&pass](const Machine &after, unsigned row) {
+            uint16_t address = memory_address(after.cpc, after.mi, after.model);
+            pass.address[row] = address;
+            pass.stored[row] = after.memory[address];
+        });
+        return pass;
+    };
+    Pass as_is = run(*base);
+
+    FeedbackCheck check;
+    auto changed = std::make_unique<Machine>();
+    for (const DelayLine &line : f.lines) {
+        for (const Tap &tap : line.taps) {
+            if (tap.passes == 0) {
+                continue;
+            }
+            *changed = *base;
+            changed->memory[as_is.address[tap.row]] += 0x2000;
+            bool moved = run(*changed).stored[line.write_row] != as_is.stored[line.write_row];
+            bool listed = std::find(line.feedback.begin(), line.feedback.end(), tap.passes) != line.feedback.end();
+            check.taps++;
+            if (moved == listed) {
+                check.agree++;
+            } else if (check.disagreements.size() < 20) {
+                std::string what = "is not listed as feedback";
+                if (listed) {
+                    what = "is listed as feedback, but the store did not change";
+                }
+                check.disagreements.push_back("row " + std::to_string(line.write_row) + "'s tap at row " +
+                                              std::to_string(tap.row) + " (lag " + std::to_string(tap.passes) +
+                                              ") " + what);
+            }
+        }
+    }
     return check;
 }
 

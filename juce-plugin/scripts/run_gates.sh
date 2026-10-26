@@ -16,8 +16,8 @@
 #   bridge       bridge_check (the rate bridge alone, no ROM)
 #   byteexact    byte_exact on every timeline in tests/timelines/ (plugin vs
 #                web-demo/wasm/web.cpp's lex_render loop; ~1 min per timeline)
-#   rtalloc      rt_alloc on one timeline: KNOWN-FAIL until the patches in
-#                patches/ land (reported, not hidden; --strict counts it)
+#   rtalloc      rt_alloc on one timeline: nothing may be allocated or freed
+#                in processBlock (patches/ landed 2026-10-14)
 #   offline      offline_realtime per set (224XL v8_21, 224X v8_1, 224 v4.3):
 #                one automation timeline in five host block schemes, offline
 #                and realtime, bit-identical; plus the state round trip and
@@ -274,17 +274,17 @@ if wanted byteexact; then
 	done
 fi
 
-# ---------------- rt_alloc (known-failing until patches/ land) ----------------
+# ---------------- rt_alloc (no allocation in processBlock) ----------------
 if wanted rtalloc; then
 	note "== rt_alloc (allocations inside processBlock) =="
 	tl="xl821_1"
 	log="$OUT/rt_alloc_$tl.log"
 	if [[ -x "$RT_ALLOC" ]] && limit 900 "$RT_ALLOC" "$FW/224XL v8_21" "$TL_DIR/$tl.events" --tail 10 > "$log" 2>&1; then
-		record PASS rtalloc "$tl: nothing allocated in processBlock (patches landed? update this gate)"
+		record PASS rtalloc "$tl: nothing allocated in processBlock"
 	else
 		counts="$(grep -iE '^ *(new|delete|operator new|total)' "$log" | head -2 | tr -s ' ' | paste -sd';' -)"
 		if [[ -x "$RT_ALLOC" ]] && tail -1 "$log" | grep -q 'rt_alloc: FAIL'; then
-			record KNOWN-FAIL rtalloc "$tl: allocates in processBlock until patches/0001+0002 land ${counts:+($counts)} — $log"
+			record FAIL rtalloc "$tl: allocates in processBlock ${counts:+($counts)} — $log"
 		else
 			record FAIL rtalloc "did not run to a verdict: see $log"
 		fi

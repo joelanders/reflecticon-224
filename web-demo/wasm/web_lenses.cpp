@@ -121,7 +121,25 @@ std::string flow_json(const uint32_t wcs[128], bool measure, Model model) {
         if (l > 0) {
             json += ",";
         }
-        json += "{\"write\":" + std::to_string(f.lines[l].write_row) + ",\"taps\":[";
+        std::string feedback;
+        for (unsigned lag : f.lines[l].feedback) {
+            if (!feedback.empty()) {
+                feedback += ",";
+            }
+            feedback += std::to_string(lag);
+        }
+        json += "{\"write\":" + std::to_string(f.lines[l].write_row) + ",\"offset\":" +
+                std::to_string(f.lines[l].offset) + ",\"oldest\":" + std::to_string(lens::oldest(f.lines[l])) +
+                ",\"kind\":\"" + lens::line_kind(f.lines[l]) + "\",\"feedback\":[" + feedback + "],\"fractional\":[";
+        for (size_t t = 0; t < f.lines[l].fractional.size(); t++) {
+            const lens::FractionalTap &tap = f.lines[l].fractional[t];
+            if (t > 0) {
+                json += ",";
+            }
+            json += "{\"near\":" + std::to_string(tap.near_row) + ",\"far\":" + std::to_string(tap.far_row) +
+                    ",\"lag32\":" + std::to_string(tap.lag32) + "}";
+        }
+        json += "],\"taps\":[";
         for (size_t t = 0; t < f.lines[l].taps.size(); t++) {
             const lens::Tap &tap = f.lines[l].taps[t];
             if (t > 0) {

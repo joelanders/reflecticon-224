@@ -89,7 +89,14 @@ Known chips are recognized by content, whatever their names. They stay in this b
 
 
 <h2>Delay memory</h2>
-<canvas id="memory" width="1024" height="160"></canvas>
+<p class="hint" style="max-width: 60em">As the running program lays it out: the current position counter (CPC) at the left edge, and each word k samples older k places to the right. A region runs from a delay line's write head (the bar) to its oldest tap (the ticks); blue lines are only tapped, orange ones feed back into themselves (the red arcs); grey is a scratch word read back within one sample. A purple triangle is a tap between two words (two taps a sample apart whose weights add up to one), the ones the firmware moves; the bar under it is how far it has moved since it was first seen, and the outline around that bar is how far the firmware lets it move.</p>
+<div class="hint">Schematic: in memory order, every region in a box sized by the square root of its length, free memory shrunk to a break mark (with its size). A region of up to four words (a filter's state, a one-sample delay) is a white cell with a meter of the word it stores.</div>
+<canvas id="memorySchematic" width="1024" height="220"></canvas>
+<div class="hint">To scale: <label><input type="checkbox" id="wholeMemory"> whole memory</label></div>
+<canvas id="memory" width="1024" height="220"></canvas>
+<div class="hint">By address, low at the left: the data stays where it was written and the program moves. Its write heads and taps slide right one address per sample (the red mark is CPC) and wrap at the end of the ring.</div>
+<canvas id="memoryAddress" width="1024" height="220"></canvas>
+<div id="memoryInfo" class="hint" style="min-height: 2.6em"></div>
 
 <h2>Running program (WCS)</h2>
 <div id="rewrites"></div>

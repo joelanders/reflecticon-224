@@ -16,6 +16,7 @@
 //   wcs            print the running program's 128 WCS words (T&C polarity)
 //   save FILE      write the WCS as the CPU sees it (0x4000-0x41FF) as an
 //                  address-prefixed hex dump
+//   dmem FILE      write the delay memory: 65,536 16-bit words, little-endian
 //   watch ADDR...  report (once each) when the CPU reaches these PCs (hex)
 //   panel          print the 224X panel's nine digit/LED bytes (lit bits = 1)
 //   audio L R      hold the converter pins: left and right ADC codes (12-bit, gain 0)
@@ -186,6 +187,11 @@ int main(int argc, char **argv) try {
                 }
                 out << line << '\n';
             }
+        } else if (op == "dmem") {
+            std::string path;
+            words >> path;
+            std::ofstream out(path, std::ios::binary);
+            out.write(reinterpret_cast<const char *>(h.dsp->memory), sizeof h.dsp->memory);
         } else if (op == "watch") {
             for (std::string a; words >> a;) {
                 h.pc_watches[std::stoul(a, nullptr, 16)] = true;

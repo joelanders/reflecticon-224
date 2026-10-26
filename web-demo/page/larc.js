@@ -63,7 +63,7 @@ export function createMachine(Module, { soon } = {}) {
     key: c('lex_key', n, [n, n, n]), fader: c('lex_fader', n, [n, n, n]),
     digits: c('lex_panel_digits', n, [n]), larcText: c('lex_larc_text', n, [n]),
     larcConnected: c('lex_larc_connected', n, [n]), cycles: c('lex_cycles', n, [n]),
-    wcs: c('lex_wcs', n, [n]), memory: c('lex_memory', n, [n]), peek: c('lex_peek', n, [n, n]),
+    wcs: c('lex_wcs', n, [n]), memory: c('lex_memory', n, [n]), cpc: c('lex_cpc', n, [n]), peek: c('lex_peek', n, [n, n]),
     poke: c('lex_poke', null, [n, n, n]), headroom: c('lex_headroom', n, [n, n]), inputGains: c('lex_input_gains', n, [n]),
     setAnalog: c('lex_set_analog', null, [n, n]),
     listing: c('lex_wcs_listing', n, [n]), model: c('lex_model', n, [n]),

@@ -177,6 +177,12 @@ EMSCRIPTEN_KEEPALIVE const uint16_t *lex_memory(Web *w) {
     return w->host->dsp->memory;
 }
 
+// The delay memory's current position counter: a MEMR or MEMW row this pass
+// uses address CPC - offset, so the word at offset k is memory[CPC - k].
+EMSCRIPTEN_KEEPALIVE int lex_cpc(Web *w) {
+    return int(w->host->dsp->cpc);
+}
+
 // The machine: 0 the 224X/224XL, 1 the original 224 (as lex_create).
 EMSCRIPTEN_KEEPALIVE int lex_model(Web *w) {
     if (w->host->model == lexicon224x::Model::Lexicon224) {
