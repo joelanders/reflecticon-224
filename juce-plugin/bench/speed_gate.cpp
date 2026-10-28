@@ -24,23 +24,45 @@
 // both channels, deterministic.
 //
 // Reported per phase: the ratio (block compute time / block duration) as
-// mean, p99, p99.9 and max. Pass: p99.9 < 0.5 and max < 0.9 at 128 frames.
+// mean, p99, p99.9 and max, and the thread's own CPU time. Pass: p99.9 < 0.5
+// and max < 0.9 at 128 frames.
+//
+// Portable: the engine is JUCE-free, so this builds anywhere. --realtime (a
+// time-constraint thread that has joined an audio work interval) is macOS
+// only; elsewhere the note says so and the load is measured the same way.
+//
+//   clang++ -std=c++20 -O3 -g -DNDEBUG -ffp-contract=off -o speed_gate bench/speed_gate.cpp
+//   g++     -std=c++20 -O3 -g -DNDEBUG -ffp-contract=off -o speed_gate bench/speed_gate.cpp
+//
+// A/B two builds of the machine on the same ROMs: the steady-state mean is
+// the stable number (it is what a PGO or a flag change moves), and the last
+// line is a hash of every output sample's bits, so two builds can be shown to
+// differ in speed only. scripts/speed_gate_ab.sh runs the set.
 #include "../source/engine.hpp"
 #include "../source/resampler.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+#if defined(__APPLE__)
 #include <mach/mach.h>
 #include <mach/mach_time.h>
 #include <mach/thread_policy.h>
 #include <AudioToolbox/AudioWorkInterval.h>
 #include <os/workgroup.h>
+#endif
 
 namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
@@ -96,12 +118,67 @@ struct Block {
     double analog, machine, resample;   // seconds, with --breakdown
 };
 
+// ---- The two clocks, in nanoseconds so both platforms share the arithmetic ----
+
+// This thread's own CPU time (what the plugin costs the audio thread).
+uint64_t thread_cpu_ns() {
+#if defined(__APPLE__)
+    return clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID);
+#elif defined(_WIN32)
+    FILETIME creation, exit, kernel, user;
+    if (GetThreadTimes(GetCurrentThread(), &creation, &exit, &kernel, &user) == 0) {
+        return 0;
+    }
+    auto ns = [](const FILETIME &t) {
+        return (uint64_t(t.dwHighDateTime) << 32 | uint64_t(t.dwLowDateTime)) * 100ull;   // 100 ns units
+    };
+    return ns(kernel) + ns(user);
+#else
+    timespec ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return uint64_t(ts.tv_sec) * 1000000000ull + uint64_t(ts.tv_nsec);
+#endif
+}
+
+#if defined(__APPLE__)
+// mach_absolute_time's ticks per nanosecond (numer/denom nanoseconds each).
+double mach_ticks_per_ns() {
+    static const double v = [] {
+        mach_timebase_info_data_t tb;
+        mach_timebase_info(&tb);
+        return double(tb.denom) / double(tb.numer);
+    }();
+    return v;
+}
+
+uint64_t to_mach_ticks(uint64_t ns) {
+    return uint64_t(double(ns) * mach_ticks_per_ns());
+}
+#endif
+
+// A monotonic clock, for --paced's block schedule.
+uint64_t now_ns() {
+#if defined(__APPLE__)
+    return uint64_t(double(mach_absolute_time()) / mach_ticks_per_ns());
+#else
+    auto since = std::chrono::steady_clock::now().time_since_epoch();
+    return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(since).count());
+#endif
+}
+
+void wait_until_ns(uint64_t t) {
+#if defined(__APPLE__)
+    mach_wait_until(to_mach_ticks(t));
+#else
+    std::this_thread::sleep_until(std::chrono::steady_clock::time_point(std::chrono::nanoseconds(t)));
+#endif
+}
+
+#if defined(__APPLE__)
 // Make this thread a real-time thread, as CoreAudio does for its IO thread:
 // a time-constraint policy with the block as its period.
 bool make_realtime(double block_seconds) {
-    mach_timebase_info_data_t tb;
-    mach_timebase_info(&tb);
-    double ticks_per_second = 1e9 * double(tb.denom) / double(tb.numer);
+    double ticks_per_second = 1e9 * mach_ticks_per_ns();
     thread_time_constraint_policy_data_t policy;
     policy.period = uint32_t(block_seconds * ticks_per_second);
     policy.computation = uint32_t(0.5 * block_seconds * ticks_per_second);
@@ -110,6 +187,72 @@ bool make_realtime(double block_seconds) {
     return thread_policy_set(mach_thread_self(), THREAD_TIME_CONSTRAINT_POLICY, thread_policy_t(&policy),
                              THREAD_TIME_CONSTRAINT_POLICY_COUNT) == KERN_SUCCESS;
 }
+#endif
+
+// --realtime's CoreAudio setup: a time-constraint thread that joins an audio
+// work interval, each block an interval with its deadline. A no-op with a
+// note where CoreAudio's scheduling does not exist.
+class Realtime {
+public:
+    Realtime(bool on, double block_seconds) {
+        block_ns_ = uint64_t(block_seconds * 1e9);
+#if defined(__APPLE__)
+        if (!on) {
+            return;
+        }
+        if (!make_realtime(block_seconds)) {
+            throw std::runtime_error("could not set the time-constraint policy");
+        }
+        workgroup_ = AudioWorkIntervalCreate("speed_gate", OS_CLOCK_MACH_ABSOLUTE_TIME, nullptr);
+        if (workgroup_ == nullptr || os_workgroup_join(workgroup_, &token_) != 0) {
+            throw std::runtime_error("could not join an audio work interval");
+        }
+        active_ = true;
+#else
+        if (on) {
+            std::fprintf(stderr, "speed_gate: --realtime is macOS-only; the load is measured the same way\n");
+        }
+        (void)block_seconds;
+#endif
+    }
+
+    ~Realtime() {
+#if defined(__APPLE__)
+        if (active_) {
+            os_workgroup_leave(workgroup_, &token_);
+        }
+#endif
+    }
+
+    Realtime(const Realtime &) = delete;
+    Realtime &operator=(const Realtime &) = delete;
+
+    void block_start(uint64_t ns) {
+#if defined(__APPLE__)
+        if (active_) {
+            (void)os_workgroup_interval_start(workgroup_, to_mach_ticks(ns), to_mach_ticks(ns + block_ns_), nullptr);
+        }
+#else
+        (void)ns;
+#endif
+    }
+
+    void block_finish() {
+#if defined(__APPLE__)
+        if (active_) {
+            (void)os_workgroup_interval_finish(workgroup_, nullptr);
+        }
+#endif
+    }
+
+private:
+#if defined(__APPLE__)
+    os_workgroup_interval_t workgroup_ = nullptr;
+    os_workgroup_join_token_s token_{};
+#endif
+    uint64_t block_ns_ = 0;
+    bool active_ = false;
+};
 
 double quantile(std::vector<double> v, double q) {
     std::sort(v.begin(), v.end());
@@ -247,6 +390,20 @@ int main(int argc, char **argv) try {
             }
         }
     };
+    // A hash of every output sample's bits, so two builds of the machine can
+    // be shown to differ in speed only (the same check byte_exact makes, minus
+    // the reference loop).
+    uint64_t output_hash = 1469598103934665603ull;   // FNV-1a
+    auto hash_samples = [&](const float *const out[4], int n) {
+        for (int c = 0; c < 4; c++) {
+            for (int i = 0; i < n; i++) {
+                uint32_t bits;
+                std::memcpy(&bits, &out[c][i], sizeof bits);
+                output_hash = (output_hash ^ bits) * 1099511628211ull;
+            }
+        }
+    };
+
     // Render n internal frames from in/out offset 0, splitting at events.
     double t_analog = 0, t_machine = 0;
     auto render = [&](const float *l, const float *r, int n) {
@@ -282,6 +439,7 @@ int main(int argc, char **argv) try {
             } else {
                 engine.render(l + done, r + done, o, count);
             }
+            hash_samples(o, count);
             done += count;
             frame += uint64_t(count);
         }
@@ -317,21 +475,9 @@ int main(int argc, char **argv) try {
         return (float(noise >> 8) / float(1u << 24) * 2.0f - 1.0f) * 0.25f;
     };
     const double block_seconds = double(block) / double(rate);
-    os_workgroup_interval_t workgroup = nullptr;
-    os_workgroup_join_token_s join_token;
-    if (realtime) {
-        if (!make_realtime(block_seconds)) {
-            throw std::runtime_error("could not set the time-constraint policy");
-        }
-        workgroup = AudioWorkIntervalCreate("speed_gate", OS_CLOCK_MACH_ABSOLUTE_TIME, nullptr);
-        if (workgroup == nullptr || os_workgroup_join(workgroup, &join_token) != 0) {
-            throw std::runtime_error("could not join an audio work interval");
-        }
-    }
-    mach_timebase_info_data_t timebase;
-    mach_timebase_info(&timebase);
-    const uint64_t block_ticks = uint64_t(block_seconds * 1e9 * double(timebase.denom) / double(timebase.numer));
-    uint64_t next_start = mach_absolute_time();
+    Realtime realtime_thread(realtime, block_seconds);
+    const uint64_t block_ns = uint64_t(block_seconds * 1e9);
+    uint64_t next_start = now_ns();
     const uint64_t steady_start = end_frame;
     const uint64_t stop = end_frame + uint64_t(seconds * 48000.0);
     std::vector<Block> blocks;
@@ -351,18 +497,16 @@ int main(int argc, char **argv) try {
             phase = 1;
         }
         if (paced) {
-            mach_wait_until(next_start);
+            wait_until_ns(next_start);
         }
-        uint64_t block_start = mach_absolute_time();
+        uint64_t block_start = now_ns();
         if (paced) {
             block_start = next_start;
         }
-        next_start = block_start + block_ticks;
-        if (workgroup != nullptr) {
-            (void)os_workgroup_interval_start(workgroup, block_start, block_start + block_ticks, nullptr);
-        }
+        next_start = block_start + block_ns;
+        realtime_thread.block_start(block_start);
         auto started = Clock::now();
-        uint64_t cpu_started = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID);
+        uint64_t cpu_started = thread_cpu_ns();
         if (!resampling) {
             render(host_in_l.data(), host_in_r.data(), block);
             std::copy(out_ch[0].begin(), out_ch[0].begin() + block, host_out_l.begin());
@@ -394,19 +538,14 @@ int main(int argc, char **argv) try {
             t_resample = std::chrono::duration<double>((r1 - r0) + (r3 - r2)).count();
         }
         double compute = std::chrono::duration<double>(Clock::now() - started).count();
-        double cpu = double(clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - cpu_started) * 1e-9;
-        if (workgroup != nullptr) {
-            (void)os_workgroup_interval_finish(workgroup, nullptr);
-        }
+        double cpu = double(thread_cpu_ns() - cpu_started) * 1e-9;
+        realtime_thread.block_finish();
         if (phase < 0) {
             continue;
         }
         blocks.push_back({phase, compute / block_seconds, cpu / block_seconds, t_analog, t_machine, t_resample});
     }
 
-    if (workgroup != nullptr) {
-        os_workgroup_leave(workgroup, &join_token);
-    }
     if (!csv.empty()) {
         FILE *f = std::fopen(csv.c_str(), "w");
         std::fprintf(f, "phase,ratio,cpu_ratio,analog_s,machine_s,resample_s\n");
@@ -434,7 +573,12 @@ int main(int argc, char **argv) try {
         }
         std::printf("%-8s blocks %7zu  mean %.3f  p99 %.3f  p99.9 %.3f  max %.3f", names[p], r.size(), sum / double(r.size()),
                     quantile(r, 0.99), quantile(r, 0.999), *std::max_element(r.begin(), r.end()));
-        std::printf("  | cpu p99.9 %.3f max %.3f", quantile(c, 0.999), *std::max_element(c.begin(), c.end()));
+        double csum = 0;
+        for (double v : c) {
+            csum += v;
+        }
+        std::printf("  | cpu mean %.3f p99.9 %.3f max %.3f", csum / double(c.size()), quantile(c, 0.999),
+                    *std::max_element(c.begin(), c.end()));
         if (breakdown) {
             double total = an + ma + rs;
             std::printf("  [analog %.0f%% machine %.0f%% resample %.0f%%]", 100 * an / total, 100 * ma / total,
@@ -442,6 +586,7 @@ int main(int argc, char **argv) try {
         }
         std::printf("\n");
     }
+    std::printf("output hash %016llx\n", static_cast<unsigned long long>(output_hash));
     return 0;
 } catch (const std::exception &e) {
     std::fprintf(stderr, "speed_gate: %s\n", e.what());

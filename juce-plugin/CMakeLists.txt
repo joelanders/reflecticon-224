@@ -73,6 +73,21 @@ target_compile_options(lexplug_engine INTERFACE $<IF:$<CXX_COMPILER_ID:MSVC>,/Z7
 # profile names functions, never ROM bytes.
 #   LEXPLUG_PGO_GENERATE=ON   instrument the machine's translation units
 #   LEXPLUG_PGO_PROFILE=FILE  compile them with this merged .profdata
+# GCC cannot read an LLVM profile: on Linux the build has to use clang++
+# (-DCMAKE_CXX_COMPILER=clang++), which is what the release job does.
+#
+# Matching is by mangled name plus a hash of the function's control flow, so a
+# function whose source changed since the training run is dropped (the two
+# -Wno-profile-instr-* flags keep that quiet). Internal-linkage functions are
+# keyed "<training file name>:<mangled name>"; that is why the trainer compiles
+# the gate through a file named PluginProcessor.cpp, the translation unit the
+# plugin compiles the machine from. Changing the machine changes those hashes:
+# retrain with scripts/pgo_train.sh; the text profiles are committed so CI needs
+# no ROMs: pgo/plugin.proftext (trained by Apple clang, merged by the macOS
+# job) and pgo/plugin-linux.proftext (trained on Linux, merged by the Linux
+# job). Each toolchain gets a profile its own compiler made: about 18% of the
+# block time on Linux x86-64 against the unprofiled GCC build, bit-identical
+# output.
 set(LEXPLUG_PGO_PROFILE "" CACHE FILEPATH "A merged clang .profdata for the machine (see scripts/pgo_train.sh)")
 option(LEXPLUG_PGO_GENERATE "Instrument the machine for a PGO training run" OFF)
 if(LEXPLUG_PGO_GENERATE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -184,6 +199,13 @@ target_link_libraries(rt_alloc PRIVATE ${PLUGIN_TARGET} juce::juce_audio_utils)
 add_executable(bridge_check tests/byte_exact/bridge_check.cpp)
 target_link_libraries(bridge_check PRIVATE lexplug_engine)
 target_compile_options(bridge_check PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O2>)
+
+# The speed gate (the PGO training harness): block CPU time on one ROM set and
+# timeline. Portable and JUCE-free, so it builds everywhere; scripts/pgo_train.sh
+# and the A/B runs use it. Takes LEXPLUG_PGO_PROFILE like the plugin does.
+add_executable(speed_gate bench/speed_gate.cpp)
+target_link_libraries(speed_gate PRIVATE lexplug_engine)
+target_compile_options(speed_gate PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O3>)
 
 # Offline == realtime: one host automation timeline through the processor in
 # several block schemes, realtime and non-realtime; the outputs must agree bit
