@@ -547,8 +547,21 @@ void PluginProcessor::run_job(Job job, uint32_t id) {
         std::lock_guard<std::mutex> lock(info_mutex_);
         booting_name_ = chosen->name;
         job_hash_[id] = chosen->catalog_hash;
+        pending_hash_ = chosen->catalog_hash;
+        pending_job_ = id;
         status_text_.clear();
     }
+    // The dropdown shows this set from now on, until its machine goes live (the
+    // message thread clears the marker then) or the job gives up here.
+    struct PendingSet {
+        PluginProcessor &processor;
+        bool offered = false;
+        ~PendingSet() {
+            if (!offered) {
+                processor.clear_pending_set();
+            }
+        }
+    } pending_set{*this};
     auto machine = std::make_unique<lexplug::LiveMachine>(chosen->model, catalog);
     machine->job = id;
     copy_text(machine->hash, sizeof machine->hash, chosen->catalog_hash);
@@ -684,6 +697,14 @@ void PluginProcessor::run_job(Job job, uint32_t id) {
         return;
     }
     offer(std::move(machine));
+    pending_set.offered = true;
+}
+
+// The boot thread: a job ended without its machine (stopped, or superseded).
+void PluginProcessor::clear_pending_set() {
+    std::lock_guard<std::mutex> lock(info_mutex_);
+    pending_job_ = 0;
+    pending_hash_.clear();
 }
 
 void PluginProcessor::offer(std::unique_ptr<lexplug::LiveMachine> machine) {
@@ -859,6 +880,11 @@ void PluginProcessor::service_message_thread() {
     std::string booting;
     {
         std::lock_guard<std::mutex> lock(info_mutex_);
+        // A job's set is what the dropdown shows until its machine goes live.
+        if (pending_job_ != 0 && live_job_.load() == pending_job_) {
+            pending_job_ = 0;
+            pending_hash_.clear();
+        }
         text = status_text_;
         booting = booting_name_;
         auto found = job_hash_.find(live_job_.load());
@@ -867,6 +893,7 @@ void PluginProcessor::service_message_thread() {
         }
         s.romSetCount = int32_t(std::min<size_t>(sets_.size(), lexui::kMaxRomSets));
         s.selectedRomSet = -1;
+        s.pendingRomSet = -1;
         for (int i = 0; i < s.romSetCount; i++) {
             const lexplug::roms::RomSet &set = sets_[size_t(i)];
             copy_text(s.romSets[i].name, sizeof s.romSets[i].name, set.name);
@@ -875,6 +902,9 @@ void PluginProcessor::service_message_thread() {
             s.romSets[i].unsupported = !set.supported;
             if (!live_hash.empty() && set.catalog_hash == live_hash) {
                 s.selectedRomSet = i;
+            }
+            if (!pending_hash_.empty() && set.catalog_hash == pending_hash_) {
+                s.pendingRomSet = i;
             }
         }
     }

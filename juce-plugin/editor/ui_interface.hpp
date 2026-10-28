@@ -58,6 +58,8 @@ struct UiSnapshot {
     int32_t romSetCount;               // entries used in romSets
     UiRomSet romSets[kMaxRomSets];
     int32_t selectedRomSet;            // index into romSets, -1 = none
+    int32_t pendingRomSet;             // the set a boot job is preparing, -1 = none: it
+                                       // becomes selectedRomSet when its machine goes live
     char romHash[17];                  // hash of the running set (catalog key), '' if none
     double machineSeconds;             // machine time since power-on (meters are timed in it)
 
@@ -100,6 +102,7 @@ inline UiSnapshot defaultSnapshot() {
     UiSnapshot s{};
     s.status = UiStatus::Booting;
     s.selectedRomSet = -1;
+    s.pendingRomSet = -1;
     s.program = -1;
     s.variation = 1;
     s.levelDb = 0.0f;

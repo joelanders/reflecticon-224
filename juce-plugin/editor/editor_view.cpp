@@ -92,11 +92,10 @@ public:
         setLabel_.setText("Firmware", juce::dontSendNotification);
         addAndMakeVisible(setLabel_);
         setBox_.setTextWhenNothingSelected("(no firmware yet)");
-        setBox_.onChange = [this] {
-            if (!updating_ && setBox_.getSelectedId() > 0) {
-                owner_.commands_.selectRomSet(setBox_.getSelectedId() - 1);
-            }
-        };
+        // No onChange: JUCE delivers it asynchronously (ComboBox::sendChange ->
+        // triggerAsyncUpdate), so the id read there is the box's id when the
+        // notification lands, not the one the user picked. applyRomSets treats a
+        // selection the editor did not draw as the user's, and sends it then.
         addAndMakeVisible(setBox_);
         status_.setFont(font(kFont, false));
         addAndMakeVisible(status_);
@@ -185,16 +184,22 @@ public:
         program_.setTextWhenNothingSelected("(power on to read the program list)");
         program_.setTextWhenNoChoicesAvailable("(no catalog for this firmware)");
         program_.onChange = [this] {
-            if (!updating_ && program_.getSelectedId() > 0) {
-                owner_.commands_.selectProgram(program_.getSelectedId() - 1);
+            int id = program_.getSelectedId();
+            // Same as the firmware box: `program_` is the id the notification
+            // reads, so a value that is still the running program (which
+            // applyProgram puts back while a load is in flight) is the
+            // snapshot's, not the user's.
+            if (!updating_ && id > 0 && id - 1 != programIndex_) {
+                owner_.commands_.selectProgram(id - 1);
             }
         };
         addAndMakeVisible(program_);
         variationLabel_.setText("Variation", juce::dontSendNotification);
         addAndMakeVisible(variationLabel_);
         variation_.onChange = [this] {
-            if (!updating_ && variation_.getSelectedId() > 0) {
-                owner_.commands_.selectVariation(variation_.getSelectedId());
+            int id = variation_.getSelectedId();
+            if (!updating_ && id > 0 && id != snapshotVariation_) {
+                owner_.commands_.selectVariation(id);
             }
         };
         addAndMakeVisible(variation_);
@@ -226,6 +231,12 @@ public:
         applyAudio(s);
         applyMeters(s);
         updating_ = false;
+    }
+
+    // The firmware dropdown, for tests (the notification order it has to survive
+    // needs a real ComboBox and the message queue).
+    juce::ComboBox &romSetBox() {
+        return setBox_;
     }
 
     int layout(int width) {
@@ -397,6 +408,13 @@ private:
         });
     }
 
+    // The firmware dropdown. A selection the editor did not draw is the user's
+    // (a click in the popup, or the arrow keys); it is sent once, and it stays in
+    // the box until the snapshot knows about it (a job preparing that set, or the
+    // machine running it), so a snapshot that still names the running set cannot
+    // undo the choice. Reading the box here rather than in ComboBox::onChange is
+    // the point: that notification arrives asynchronously, after a timer tick may
+    // have put the box back on the running set.
     void applyRomSets(const UiSnapshot &s) {
         juce::String signature;
         int count = juce::jlimit(0, kMaxRomSets, int(s.romSetCount));
@@ -407,6 +425,8 @@ private:
         if (signature != romSignature_) {
             romSignature_ = signature;
             setBox_.clear(juce::dontSendNotification);
+            shownRomSet_ = -1;
+            wantedRomSet_ = -1;
             for (int i = 0; i < count; i++) {
                 const UiRomSet &set = s.romSets[i];
                 juce::String name(cString(set.name, sizeof set.name));
@@ -421,12 +441,29 @@ private:
             }
         }
         setBox_.setEnabled(count > 0);
-        int selected = 0;
-        if (s.selectedRomSet >= 0 && s.selectedRomSet < count) {
-            selected = s.selectedRomSet + 1;
+
+        int shownId = setBox_.getSelectedId();
+        int shown = shownId > 0 ? shownId - 1 : -1;
+        if (shown != shownRomSet_ && shown >= 0 && shown < count && !s.romSets[shown].unsupported) {
+            wantedRomSet_ = shown;
+            owner_.commands_.selectRomSet(shown);
         }
-        if (setBox_.getSelectedId() != selected) {
-            setBox_.setSelectedId(selected, juce::dontSendNotification);
+        // The snapshot knows more than we do once a job prepares the wanted set
+        // (pendingRomSet) or the machine runs it; either way, stop holding it.
+        if (s.pendingRomSet >= 0 || s.selectedRomSet == wantedRomSet_) {
+            wantedRomSet_ = -1;
+        }
+        int fromSnapshot = s.selectedRomSet;
+        if (s.pendingRomSet >= 0) {
+            fromSnapshot = s.pendingRomSet;
+        }
+        if (fromSnapshot < 0 || fromSnapshot >= count) {
+            fromSnapshot = -1;
+        }
+        int show = wantedRomSet_ >= 0 ? wantedRomSet_ : fromSnapshot;
+        shownRomSet_ = show;
+        if (setBox_.getSelectedId() != show + 1) {
+            setBox_.setSelectedId(show + 1, juce::dontSendNotification);
         }
     }
 
@@ -624,6 +661,7 @@ private:
         if (program_.getSelectedId() != wantedProgram) {
             program_.setSelectedId(wantedProgram, juce::dontSendNotification);
         }
+        snapshotVariation_ = s.variation;
         if (variation_.getSelectedId() != s.variation) {
             variation_.setSelectedId(s.variation, juce::dontSendNotification);
         }
@@ -711,12 +749,15 @@ private:
     bool updating_ = false;
     const lexcat::Catalog *catalog_ = nullptr;
     int programIndex_ = -2;
+    int snapshotVariation_ = 1;   // the snapshot's variation: what a stale notification reads
     juce::String romSignature_ = "\x01";
 
     juce::Label machineHeading_, audioHeading_, inputHeading_, outputHeading_, programHeading_;
     juce::TextButton romButton_;
     juce::Label setLabel_;
     juce::ComboBox setBox_;
+    int shownRomSet_ = -1;        // the firmware index the box shows (the editor drew it)
+    int wantedRomSet_ = -1;       // the user's pick, until the snapshot knows of it
     juce::Label status_;
     std::unique_ptr<juce::FileChooser> chooser_;
 
@@ -775,6 +816,10 @@ int EditorView::contentHeight() const {
 
 juce::Component &EditorView::content() {
     return *content_;
+}
+
+juce::ComboBox &EditorView::romSetBox() {
+    return content_->romSetBox();
 }
 
 void EditorView::resized() {

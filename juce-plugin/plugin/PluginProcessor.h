@@ -165,6 +165,7 @@ private:
     void render_chunk(const float *l, const float *r, float *out_l, float *out_r, int frames);
     void publish_meters();
     void set_status_text(const std::string &text);
+    void clear_pending_set();
     void set_param(int index, float value);
     const lexcat::Catalog *live_catalog() const;
 
@@ -211,6 +212,8 @@ private:
     std::map<uint32_t, std::string> job_hash_;           // job id -> its set's catalog hash
     std::string status_text_;
     std::string booting_name_;
+    std::string pending_hash_;                           // the set the boot job prepares ('' = none)
+    uint32_t pending_job_ = 0;                           // that job's id
     lexstate::StateKeeper keeper_;
 
     // Message thread.
