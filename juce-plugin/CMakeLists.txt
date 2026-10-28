@@ -196,3 +196,14 @@ target_link_libraries(offline_realtime PRIVATE ${PLUGIN_TARGET} juce::juce_audio
 juce_add_console_app(editor_shot PRODUCT_NAME "editor_shot")
 target_sources(editor_shot PRIVATE tests/offline_realtime/editor_shot.cpp)
 target_link_libraries(editor_shot PRIVATE ${PLUGIN_TARGET} juce::juce_audio_utils)
+
+# The firmware dropdown's request tracking, with no ROMs, audio or window: a
+# pick is sent once, survives a tick that still sees the old set running, and is
+# not undone (editor_view.cpp's applyRomSets).
+juce_add_console_app(editor_firmware_select PRODUCT_NAME "editor_firmware_select")
+target_sources(editor_firmware_select PRIVATE tests/editor/firmware_select.cpp editor/editor_view.cpp)
+# The test pumps the message loop (MessageManager::runDispatchLoopUntil) so the
+# asynchronous notification an onChange handler would read the box in also runs.
+target_compile_definitions(editor_firmware_select PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+target_link_libraries(editor_firmware_select PRIVATE lexplug_model juce::juce_gui_basics
+                                                  juce::juce_recommended_config_flags)
