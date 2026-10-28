@@ -149,6 +149,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build unzip xvfb \
+            clang llvm \
             libasound2-dev libfreetype-dev libfontconfig1-dev \
             libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev \
             libgl1-mesa-dev
@@ -164,12 +165,43 @@ jobs:
         if: steps.juce.outputs.cache-hit != 'true'
         run: git clone --depth 1 --branch "$JUCE_VERSION" https://github.com/juce-framework/JUCE.git "$JUCE_DIR"
 
+      # clang, because the committed PGO profile is LLVM's: GCC reads .gcda
+      # and ignores LEXPLUG_PGO_PROFILE (a warning). The text profile is
+      # indexed by the runner's own llvm-profdata, so no ROMs are needed here.
+      # plugin-linux.proftext is the profile trained on Linux (scripts/
+      # pgo_train.sh); plugin.proftext, which the macOS job uses, was trained
+      # by Apple clang, and the profile keys on hashes of the functions' control
+      # flow, so each toolchain gets the profile made by its own.
       - name: Build
         run: |
+          llvm-profdata merge -output=juce-plugin/build-profile.profdata juce-plugin/pgo/plugin-linux.proftext
           cmake -S juce-plugin -B juce-plugin/build -G Ninja \
-            -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR"
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR" \
+            -DLEXPLUG_PGO_PROFILE="$PWD/juce-plugin/build-profile.profdata"
           cmake --build juce-plugin/build --parallel "$(nproc)" \
             --target Reflexion224_VST3 Reflexion224_Standalone
+
+      # Did the profile reach the machine? Clang drops a function whose profile
+      # name or control-flow hash does not match without a word (the plugin
+      # build even silences the unprofiled warning), so count what the profile
+      # put in the IR instead: the bench translation unit holds the whole
+      # machine and needs no JUCE, and it is compiled through a file named
+      # PluginProcessor.cpp, as the trainer does (internal-linkage functions are
+      # keyed "<training file name>:<mangled name>"). Zero means the profile and
+      # the toolchain have drifted apart and the build is unprofiled.
+      - name: Check the profile against this toolchain
+        run: |
+          mkdir -p /tmp/pgo-check
+          printf '#include "%s/juce-plugin/bench/speed_gate.cpp"\n' "$PWD" > /tmp/pgo-check/PluginProcessor.cpp
+          annotated() {
+            clang++ -std=c++20 -O1 -DNDEBUG -ffp-contract=off \
+              -fprofile-instr-use=juce-plugin/build-profile.profdata \
+              -S -emit-llvm -o - "$1" 2>/dev/null | grep -c '!prof' || true
+          }
+          plugin_tu=$(annotated /tmp/pgo-check/PluginProcessor.cpp)
+          printf 'profile annotations: %s in the plugin translation unit\n' "$plugin_tu"
+          if [ "$plugin_tu" = 0 ]; then echo "the profile does not apply to this toolchain" >&2; exit 1; fi
 
       # No ROMs here: the plugin boots nothing and passes the audio through
       # dry, which is enough to check that a host can load, run and save it.

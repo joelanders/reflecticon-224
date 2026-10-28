@@ -17,3 +17,4 @@ __pycache__/
 /8080/refs/
 juce-plugin/pgo/*
 !juce-plugin/pgo/plugin.proftext
+!juce-plugin/pgo/plugin-linux.proftext
