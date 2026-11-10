@@ -85,6 +85,19 @@ public:
     bool halted = false;
     std::unique_ptr<Machine> dsp = std::make_unique<Machine>();
     uint64_t audio_count = 0;
+    // How the DSP rows run (set_lean). Every level gives the same machine,
+    // bit for bit; they differ in speed.
+    //   0  every row through the scheduler's five phases;
+    //   1  ... with the scheduler back on its whole-row path at every row start;
+    //   2  (the default) also, quiet rows run in batches through
+    //      lean_rows_from(): no CPU access to the WCS waiting or in its
+    //      window, no counter clear pending, no trace;
+    //   3  as 2, and a second set of diagnostic monitors is kept up row by
+    //      row, as level 0 keeps them; every monitor read is compared with it
+    //      (a difference throws). For tests.
+    int lean = 2;
+    uint64_t lean_rows = 0, exact_rows = 0;
+    uint64_t monitor_syncs = 0, monitor_saturated_rows = 0, monitor_reads = 0, monitor_reads_checked = 0;
     // Observers. The CPU runs ahead of the DSP between the bus cycles that
     // join them (run_until), so a DSP-side observer (audio, row) sees
     // `cycles`, the panel and the LARC in its future, and a CPU-side one
@@ -110,6 +123,8 @@ public:
         }
         wcs_access.model = model;
         diagnostics.model = model;
+        shadow_diagnostics.model = model;
+        set_lean(lean);
     }
 
     const Model model;
@@ -136,6 +151,7 @@ public:
         return dmem.reset_edge_count();
     }
 
+    void set_lean(int level) { lean = level; scheduler.rows_first = level >= 1; }
     Tick now() const {
         return scheduler.now();
     }
@@ -194,7 +210,7 @@ public:
                 if (bus.board != Board::Sbc) {
                     scheduler.run_dsp_until(state_time, [this](RowPhase kind, uint64_t row_number) {
                         run_row_phase(kind, row_number);
-                    });
+                    }, [this](Tick marker, uint64_t row, uint64_t count) { return lean_rows_from(marker, row, count); });
                 }
                 scheduler.enter_cpu_state();
                 cpu_state();
@@ -222,6 +238,7 @@ public:
     // Report what happens to `probe` (trace.hpp; timeline.hpp puts
     // it into words); null stops it.
     void set_trace(Trace *probe) {
+        sync_monitors();    // Lean rows: traced rows run exactly, from up-to-date monitors
         trace = probe;
         wcs_access.set_trace(probe);
         diagnostics.set_trace(probe);
@@ -231,6 +248,71 @@ private:
     Scheduler scheduler;
     WcsAccess wcs_access{scheduler, *dsp};
     TcDiagnostics diagnostics{scheduler};
+    TcDiagnostics shadow_diagnostics{scheduler};    // lean level 3: kept up every row
+
+    // Lean rows: the monitors' inputs for the rows that ran lean and
+    // are not in `diagnostics` yet. Two rows are enough: a row without SAT
+    // leaves DPORT3-5 and U9 depending only on itself and (through the
+    // registers' previous values) the row before it, and a row with SAT is
+    // brought in at once (lean_row), so every row still waiting has none.
+    struct MonitorRow {
+        Tick marker = 0;
+        uint32_t microinstruction = 0;
+        bool sign_latch = false;
+        unsigned saturated = 0;
+        // What the monitors read of the three ARU clocks (at_arithmetic).
+        OperandClock operand[3] = {};
+        uint8_t pair[3] = {};
+    };
+    MonitorRow monitor_rows[2];
+    unsigned monitor_latest = 0;        // which of the two is the later row
+    unsigned monitor_rows_waiting = 0;  // 0, 1, or 2 (2: two or more)
+
+    void bring_in(const MonitorRow &r) {
+        Aruck clocked[3] = {};
+        for (unsigned edge = 0; edge < 3; edge++) {
+            clocked[edge].operand = r.operand[edge];
+            clocked[edge].pair = r.pair[edge];
+        }
+        diagnostics.at_marker(r.microinstruction, r.sign_latch, r.marker);
+        diagnostics.at_arithmetic(clocked, r.saturated, r.marker, r.marker + scheduler.timing.execute_offset);
+    }
+
+    // Bring `diagnostics` up to date: before an exact row, a monitor read, or
+    // a lean row with SAT goes in.
+    void sync_monitors() {
+        if (monitor_rows_waiting == 0) {
+            return;
+        }
+        if (monitor_rows_waiting >= 2) {
+            bring_in(monitor_rows[monitor_latest ^ 1]);
+        }
+        bring_in(monitor_rows[monitor_latest]);
+        monitor_rows_waiting = 0;
+        monitor_syncs++;
+    }
+
+    uint8_t monitor_byte(unsigned port) {
+        sync_monitors();
+        monitor_reads++;
+        auto byte_of = [port](const TcDiagnostics &d) {
+            if (port == ArithmeticMonitor) {
+                return d.arithmetic_monitor();
+            }
+            if (port == MicroinstructionMonitor) {
+                return d.microinstruction_monitor();
+            }
+            return d.timing_monitor();
+        };
+        uint8_t value = byte_of(diagnostics);
+        if (lean == 3) {
+            monitor_reads_checked++;
+            if (byte_of(shadow_diagnostics) != value) {
+                throw std::logic_error("lean rows: diagnostic port " + std::to_string(port) + " differs from the row-by-row monitors");
+            }
+        }
+        return value;
+    }
     Dmem dmem{scheduler};
     FpcHeadroom headroom{scheduler};
     unsigned level_detectors[2] = {0, 0};   // the AIN's comparators, per input channel (set_level_detectors)
@@ -252,13 +334,113 @@ private:
     void advance_ticks(Tick deadline) {
         scheduler.run_dsp_until(deadline, [this](RowPhase kind, uint64_t row_number) {
             run_row_phase(kind, row_number);
-        });
+        }, [this](Tick marker, uint64_t row, uint64_t count) { return lean_rows_from(marker, row, count); });
         scheduler.stand_at(deadline);
         remote.advance(scheduler.now() / cpu_period);
     }
 
     void advance(uint64_t cycle) {
         advance_ticks(cycle * cpu_period);
+    }
+
+    // Lean rows: quiet rows, each in one piece, as many as fit before
+    // the deadline. Quiet: no trace, no CPU access to the WCS waiting or in
+    // its window, no counter clear pending. Then begin_row,
+    // execute_row, fetch_row, the RESET decode and converter_row reduce to
+    // this loop, with the same results in the row machine. The scheduler's
+    // clock is moved only where something reads it (a WR_XREG, a row
+    // observer, the headroom registers and DAC captures after a converter
+    // clock) and at the end. The diagnostic monitors (DPORT3-5) are brought
+    // up to date from monitor_rows when something needs them (sync_monitors).
+    LEXICON_ALWAYS_INLINE uint64_t lean_rows_from(Tick first_marker, uint64_t first_row, uint64_t count) {
+        if (lean < 2 || trace) {    // (a trace wants every row's monitor events)
+            return 0;
+        }
+        // Quiet now is quiet for all `count` rows: the CPU does not run in
+        // between, and a lean row schedules no bus effect (checked below
+        // where a row calls out).
+        if (first_row == 0 || !wcs_access.idle(first_marker) || !dmem.quiet(first_marker)) {
+            return 0;
+        }
+        const RowTiming &timing = scheduler.timing;
+        const bool checking = lean == 3;
+        dsp->xreg_from_cpu = dmem.xreg_to_dsp();    // the CPU's side of XREG stands still meanwhile
+        dsp->operand_held[0] = dsp->operand_held[1] = dsp->operand_held[2] = false;
+        Tick marker = first_marker;
+        uint64_t ran = 0;
+        while (ran < count) {
+            // Begin.
+            uint32_t row_microinstruction = dsp->microinstruction;
+            bool row_reset = dsp->mi.reset;
+            bool sign_latch = dsp->finishing.negative;
+            if (checking) {
+                shadow_diagnostics.at_marker(row_microinstruction, sign_latch, marker);
+            }
+            // Execute the previous row's microinstruction.
+            execute(*dsp);
+            if (row_observer) {
+                scheduler.set_time(marker + timing.execute_offset);
+                row_observer(first_row + ran - 1, *dsp);
+            }
+            // The monitors' inputs wait in monitor_rows; a row with SAT (the
+            // one-shot, U9's SAT bit) goes in now, in order.
+            monitor_latest ^= 1;
+            MonitorRow &record = monitor_rows[monitor_latest];
+            record.marker = marker;
+            record.microinstruction = row_microinstruction;
+            record.sign_latch = sign_latch;
+            record.saturated = dsp->saturated;
+            for (unsigned edge = 0; edge < 3; edge++) {
+                record.operand[edge] = dsp->clocked[edge].operand;
+                record.pair[edge] = uint8_t(dsp->clocked[edge].pair);
+            }
+            if (monitor_rows_waiting < 2) {
+                monitor_rows_waiting++;
+            }
+            if (dsp->saturated) {
+                monitor_saturated_rows++;
+                sync_monitors();
+            }
+            if (checking) {
+                shadow_diagnostics.at_arithmetic(dsp->clocked, dsp->saturated, marker, marker + timing.execute_offset);
+            }
+            bool called_out = false;
+            if (dsp->mi.wr_xreg) {
+                scheduler.set_time(marker + timing.execute_offset);
+                dmem.on_wr_xreg(dsp->xreg_to_cpu, marker + timing.xreg_capture_offset);
+                called_out = true;
+            }
+            // Fetch.
+            dsp->run = dmem.run_level_high();
+            bool previous_protect = dsp->mi.protect;
+            fetch(*dsp, false);
+            wcs_access.at_fetch(previous_protect, row_reset, dsp->mi.protect);
+            // RESET_N follows the microinstruction at this row's marker; on the
+            // 224, the one just fetched (run_row_phase, ResetDecode).
+            if (model == Model::Lexicon224) {
+                dmem.reset_n_lean(dsp->mi.reset);
+            } else {
+                dmem.reset_n_lean(row_reset);
+            }
+            // Converter.
+            bool ch1_before = dsp->fpc.ch1;
+            converter_clock(*dsp);
+            if (dsp->fpc.ch1 != ch1_before || dsp->dac_channels) {
+                scheduler.set_time(marker + timing.converter_offset);
+                after_converter_clock(ch1_before);
+                dsp->xreg_from_cpu = dmem.xreg_to_dsp();
+                called_out = true;
+            }
+            ran++;
+            if (called_out && !scheduler.no_events()) {
+                break;      // a bus effect was scheduled: the scheduler takes it from here
+            }
+            marker += timing.row;
+        }
+        // The clock stands where the last row's converter clock left it.
+        scheduler.set_time(first_marker + (ran - 1) * timing.row + timing.converter_offset);
+        lean_rows += ran;
+        return ran;
     }
 
     // ---- DSP rows: the T&C's row phases -----------------------------------------------
@@ -307,7 +489,12 @@ private:
         marker_microinstruction = dsp->microinstruction;
         marker_protect = dsp->mi.protect;
         marker_reset = dsp->mi.reset;
+        exact_rows++;
+        sync_monitors();
         diagnostics.at_marker(marker_microinstruction, dsp->finishing.negative);
+        if (lean == 3) {
+            shadow_diagnostics.at_marker(marker_microinstruction, dsp->finishing.negative);
+        }
         wcs_access.at_marker(marker_protect, dmem.run_level_high());
     }
 
@@ -328,6 +515,11 @@ private:
         dsp->xreg_from_cpu = dmem.xreg_to_dsp();  // what the XREG input bank drives for WR_DA now
         bool ch1_before = dsp->fpc.ch1;
         converter_clock(*dsp);
+        after_converter_clock(ch1_before);
+    }
+
+    // What follows the converter clock: the headroom registers and the DAC capture.
+    LEXICON_ALWAYS_INLINE void after_converter_clock(bool ch1_before) {
         // The FPC clocks the two headroom registers "on opposite edges of
         // the channel select signal, CH1" (224X Service Manual 3.8), register
         // HR1 (port 8, "CH1 HEADROOM") with channel 1's levels, HR2 with
@@ -371,6 +563,9 @@ private:
             row_observer(row_number, *dsp);
         }
         diagnostics.at_arithmetic(dsp->clocked, dsp->saturated, next_marker);
+        if (lean == 3) {
+            shadow_diagnostics.at_arithmetic(dsp->clocked, dsp->saturated, next_marker);
+        }
         if (trace) {
             const Hold clocks[3] = {Hold::SecondShift, Hold::Load, Hold::FirstShift};
             for (unsigned edge = 0; edge < 3; edge++) {
@@ -699,11 +894,11 @@ private:
             case BusTest:
                 return dmem.bus_test_register();
             case ArithmeticMonitor:
-                return diagnostics.arithmetic_monitor();
+                return monitor_byte(port);
             case MicroinstructionMonitor:
-                return diagnostics.microinstruction_monitor();
+                return monitor_byte(port);
             case TimingMonitor:
-                return diagnostics.timing_monitor();
+                return monitor_byte(port);
             case TransferLow:
                 return uint8_t(dmem.xreg_to_cpu());
             case TransferHigh:
