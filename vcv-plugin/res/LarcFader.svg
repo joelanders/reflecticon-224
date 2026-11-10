@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The fader's slot, after the LARC drawing in the 224X owner's manual v8.2
+     (PDF p. 13, "Location of Controls, Indicators, and Connectors"): a
+     narrow black slot with rounded ends. The widget's size is this SVG's:
+     10.4 x 50 mm, centred on the fader. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="10.4mm" height="50mm" viewBox="0 0 10.4 50">
+  <rect x="4.7" y="0.6" width="1.0" height="48.8" rx="0.5" fill="#141210"/>
+</svg>
