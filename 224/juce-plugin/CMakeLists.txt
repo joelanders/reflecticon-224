@@ -31,6 +31,14 @@ set(PLUGIN_TARGET Reflecticon224)
 set(PLUGIN_SUPPORT_FOLDER "Reflexion224")
 
 project(${PLUGIN_TARGET} VERSION 0.2.0 LANGUAGES C CXX)
+# Hide every symbol but the plugin entry points: JUCE has inline variables and templates that are
+# otherwise exported as weak symbols, and macOS coalesces those across every plugin a host loads,
+# so one JUCE plugin ends up using another's (corrupted state, crashes on restore in Live).
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_OBJC_VISIBILITY_PRESET hidden)
+set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 if(APPLE)
     enable_language(OBJC OBJCXX)
 endif()
