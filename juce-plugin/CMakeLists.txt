@@ -205,6 +205,10 @@ target_compile_options(bridge_check PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O2
 # and the A/B runs use it. Takes LEXPLUG_PGO_PROFILE like the plugin does.
 add_executable(speed_gate bench/speed_gate.cpp)
 target_link_libraries(speed_gate PRIVATE lexplug_engine)
+# On macOS the gate's --realtime mode uses an audio work interval.
+if(APPLE)
+    target_link_libraries(speed_gate PRIVATE "-framework AudioToolbox" "-framework CoreFoundation")
+endif()
 target_compile_options(speed_gate PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/O2,-O3>)
 
 # Offline == realtime: one host automation timeline through the processor in
