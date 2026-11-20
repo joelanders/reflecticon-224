@@ -152,7 +152,7 @@ _ZN11lexicon224x3bitEjj
 # Num Counters:
 1
 # Counter Values:
-7034007034
+4472290834
 
 _ZN11lexicon224x3cpu11FpcHeadroom16on_read_releasedEjy
 # Func Hash:
@@ -200,21 +200,29 @@ _ZN11lexicon224x3cpu13TcDiagnostics13DelayedInputs3setERKNS1_6InputsEyy
 # Num Counters:
 1
 # Counter Values:
-980600289
+126694889
 
 _ZN11lexicon224x3cpu13TcDiagnostics13at_arithmeticERA3_KNS_5AruckEjy
+# Func Hash:
+0
+# Num Counters:
+1
+# Counter Values:
+43071362
+
+_ZN11lexicon224x3cpu13TcDiagnostics13at_arithmeticERA3_KNS_5AruckEjyy
 # Func Hash:
 9124534504996160586
 # Num Counters:
 5
 # Counter Values:
-490300143
-490300131
-1470900393
+63347443
+63347431
+190042293
 649639
 649639
 
-_ZN11lexicon224x3cpu13TcDiagnostics13sample_dport3ERA3_KNS_5AruckEy
+_ZN11lexicon224x3cpu13TcDiagnostics13sample_dport3ERA3_KNS_5AruckEyy
 # Func Hash:
 3991519
 # Num Counters:
@@ -242,11 +250,19 @@ _ZN11lexicon224x3cpu13TcDiagnostics17sample_arithmeticERKNS_5AruckEbyj
 
 _ZN11lexicon224x3cpu13TcDiagnostics9at_markerEjb
 # Func Hash:
+0
+# Num Counters:
+1
+# Counter Values:
+43071365
+
+_ZN11lexicon224x3cpu13TcDiagnostics9at_markerEjby
+# Func Hash:
 11040568401
 # Num Counters:
 3
 # Counter Values:
-490300146
+63347446
 0
 0
 
@@ -256,7 +272,7 @@ _ZN11lexicon224x3cpu13TcDiagnosticsC2ERKNS0_9SchedulerE
 # Num Counters:
 1
 # Counter Values:
-3
+6
 
 _ZN11lexicon224x3cpu13periodic_edgeEyyy
 # Func Hash:
@@ -281,14 +297,14 @@ _ZN11lexicon224x3cpu4Dmem10at_executeEyRNS_7MachineE
 # Num Counters:
 9
 # Counter Values:
-490300143
+43071362
 12
 15
 12
-459044618
+42482856
 42
-459044621
-459044618
+42482859
+42482856
 42
 
 _ZN11lexicon224x3cpu4Dmem10on_reset_nEb
@@ -297,11 +313,11 @@ _ZN11lexicon224x3cpu4Dmem10on_reset_nEb
 # Num Counters:
 5
 # Counter Values:
-490300146
-4382560
-4456125
-4382560
-8765120
+43071365
+508277
+512167
+508277
+907149
 
 _ZN11lexicon224x3cpu4Dmem10on_wr_xregEty
 # Func Hash:
@@ -310,6 +326,16 @@ _ZN11lexicon224x3cpu4Dmem10on_wr_xregEty
 1
 # Counter Values:
 6087067
+
+_ZN11lexicon224x3cpu4Dmem12reset_n_leanEb
+# Func Hash:
+188985321590432858
+# Num Counters:
+3
+# Counter Values:
+447228781
+439370810
+3874283
 
 _ZN11lexicon224x3cpu4Dmem14on_port_strobeEjy
 # Func Hash:
@@ -385,19 +411,30 @@ _ZN11lexicon224x3cpu4DmemC2ERNS0_9SchedulerE
 
 _ZN11lexicon224x3cpu4Host11execute_rowEy
 # Func Hash:
-13007270115522787975
+5832982705870212986
 # Num Counters:
-9
+10
 # Counter Values:
-490300143
-487747649
-1463242947
+43071362
+40518868
+121556604
 7657482
 0
 0
 0
 0
-6087067
+0
+437571
+
+_ZN11lexicon224x3cpu4Host12monitor_byteEj
+# Func Hash:
+188949596073170008
+# Num Counters:
+3
+# Counter Values:
+1148
+0
+0
 
 _ZN11lexicon224x3cpu4Host13advance_ticksEy
 # Func Hash:
@@ -409,15 +446,11 @@ _ZN11lexicon224x3cpu4Host13advance_ticksEy
 
 _ZN11lexicon224x3cpu4Host13converter_rowEv
 # Func Hash:
-3793525958732218233
+0
 # Num Counters:
-5
+1
 # Counter Values:
-490300143
-8539826
-4269913
-13539495
-13539495
+43071362
 
 _ZN11lexicon224x3cpu4Host13read_dsp_portEj
 # Func Hash:
@@ -445,16 +478,57 @@ _ZN11lexicon224x3cpu4Host13run_row_phaseENS0_8RowPhaseEy
 # Num Counters:
 10
 # Counter Values:
-2451500727
+215356822
 0
-2451500727
-490300146
-490300146
-490300143
-490300146
-490300146
-118103394
-490300143
+215356822
+43071365
+43071365
+43071362
+43071365
+43071365
+12731657
+43071362
+
+_ZN11lexicon224x3cpu4Host13sync_monitorsEv
+# Func Hash:
+2952352217293969
+# Num Counters:
+3
+# Counter Values:
+43072517
+31959571
+9163135
+
+_ZN11lexicon224x3cpu4Host14lean_rows_fromEyyy
+# Func Hash:
+15463120529851128667
+# Num Counters:
+24
+# Counter Values:
+28009127
+0
+28009127
+28009127
+16433240
+11575898
+11575887
+28009124
+11575898
+447228781
+0
+0
+1341686343
+20276081
+4
+0
+5649496
+105371737
+20300633
+439292549
+426928148
+0
+25947762
+0
 
 _ZN11lexicon224x3cpu4Host15begin_bus_cycleEy
 # Func Hash:
@@ -493,6 +567,18 @@ _ZN11lexicon224x3cpu4Host19set_level_detectorsEjj
 1
 # Counter Values:
 9874196
+
+_ZN11lexicon224x3cpu4Host21after_converter_clockEb
+# Func Hash:
+3793525958732218233
+# Num Counters:
+5
+# Counter Values:
+63371995
+8539826
+4269913
+13539495
+13539495
 
 _ZN11lexicon224x3cpu4Host3keyEhb
 # Func Hash:
@@ -544,6 +630,15 @@ _ZN11lexicon224x3cpu4Host7commandEv
 6176347
 6176344
 
+_ZN11lexicon224x3cpu4Host8bring_inERKNS1_10MonitorRowE
+# Func Hash:
+18129
+# Num Counters:
+2
+# Counter Values:
+20276081
+60828243
+
 _ZN11lexicon224x3cpu4Host8read_wcsEv
 # Func Hash:
 13403057725683606548
@@ -556,6 +651,14 @@ _ZN11lexicon224x3cpu4Host8read_wcsEv
 4962
 4962
 
+_ZN11lexicon224x3cpu4Host8set_leanEi
+# Func Hash:
+30
+# Num Counters:
+1
+# Counter Values:
+3
+
 _ZN11lexicon224x3cpu4Host8step_oneEy
 # Func Hash:
 24
@@ -566,11 +669,12 @@ _ZN11lexicon224x3cpu4Host8step_oneEy
 
 _ZN11lexicon224x3cpu4Host9begin_rowEv
 # Func Hash:
-0
+2749585
 # Num Counters:
-1
+2
 # Counter Values:
-490300146
+43071365
+0
 
 _ZN11lexicon224x3cpu4Host9cpu_stateEv
 # Func Hash:
@@ -619,7 +723,7 @@ _ZN11lexicon224x3cpu4Host9fetch_rowEy
 # Num Counters:
 4
 # Counter Values:
-490300146
+43071365
 0
 0
 0
@@ -713,28 +817,29 @@ _ZN11lexicon224x3cpu9Scheduler12set_cpu_timeEy
 # Counter Values:
 341421450
 
-_ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host13advance_ticksEyEUlNS0_8RowPhaseEyE_EEvyOT_
+_ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host13advance_ticksEyEUlNS0_8RowPhaseEyE_ZNS3_13advance_ticksEyEUlyyyE_EEvyOT_OT0_
 # Func Hash:
-10156966991687559915
+12766809697801014101
 # Num Counters:
-25
+29
 # Counter Values:
 8002064
-34163818
-2629933
-3031569
-2629933
-2308063
-2173737
-2308063
-2173737
-2308063
-2308063
-2308063
-2308063
-9491084
+32088284
+14808139
+15209775
+14808139
+7184924
+7181779
+2121
+3145
+2121
+3145
+3145
+3145
+3145
+2364214
 478570
-7450469
+323599
 2040615
 0
 0
@@ -742,31 +847,35 @@ _ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host13advance_ticksEyEUlNS0_
 0
 0
 8002064
-1995253562
+37310353
+7168043
+37310353
+7168043
 7448918
 
-_ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host9run_untilEyEUlNS0_8RowPhaseEyE_EEvyOT_
+_ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host9run_untilEyEUlNS0_8RowPhaseEyE_ZNS3_9run_untilEyEUlyyyE_EEvyOT_OT0_
 # Func Hash:
-10156966991687559915
+12766809697801014101
 # Num Counters:
-25
+29
 # Counter Values:
 28368698
-81655208
-25057315
-28948679
-25057315
-14194209
-13820961
-13977367
-13820961
-13977367
-13977367
-13977367
-13977367
-22364622
+102019105
+46883414
+50774778
+46883414
+20824203
+4394108
+15902122
+16130191
+15902122
+16130191
+16130191
+16130191
+16130191
+21633521
 4899389
-4260899
+3529798
 18103723
 0
 0
@@ -774,8 +883,11 @@ _ZN11lexicon224x3cpu9Scheduler13run_dsp_untilIZNS0_4Host9run_untilEyEUlNS0_8RowP
 0
 295007
 28073691
-347466266
-16653074
+77760733
+16490520
+77760733
+16490520
+15513384
 
 _ZN11lexicon224x3cpu9Scheduler14run_next_phaseIZNS0_4Host13advance_ticksEyEUlNS0_8RowPhaseEyE_EEvRT_
 # Func Hash:
@@ -783,9 +895,9 @@ _ZN11lexicon224x3cpu9Scheduler14run_next_phaseIZNS0_4Host13advance_ticksEyEUlNS0
 # Num Counters:
 3
 # Counter Values:
-2004207866
-400885115
-400604549
+39271089
+7924420
+7510552
 
 _ZN11lexicon224x3cpu9Scheduler14run_next_phaseIZNS0_4Host8step_oneEyEUlNS0_8RowPhaseEyE_EEvRT_
 # Func Hash:
@@ -803,9 +915,9 @@ _ZN11lexicon224x3cpu9Scheduler14run_next_phaseIZNS0_4Host9run_untilEyEUlNS0_8Row
 # Num Counters:
 3
 # Counter Values:
-365939601
-73129601
-73700896
+95348242
+19013609
+19656567
 
 _ZN11lexicon224x3cpu9Scheduler15enter_cpu_stateEv
 # Func Hash:
@@ -821,9 +933,9 @@ _ZN11lexicon224x3cpu9Scheduler15next_phase_timeEv
 # Num Counters:
 3
 # Counter Values:
-4839871297
-490300146
-2451500730
+393821669
+54647252
+273236260
 
 _ZN11lexicon224x3cpu9Scheduler15whole_row_phaseIZNS0_4Host13advance_ticksEyEUlNS0_8RowPhaseEyE_EEbyS4_yRT_
 # Func Hash:
@@ -831,8 +943,8 @@ _ZN11lexicon224x3cpu9Scheduler15whole_row_phaseIZNS0_4Host13advance_ticksEyEUlNS
 # Num Counters:
 2
 # Counter Values:
-11405989
-2173737
+14701
+2121
 
 _ZN11lexicon224x3cpu9Scheduler15whole_row_phaseIZNS0_4Host9run_untilEyEUlNS0_8RowPhaseEyE_EEbyS4_yRT_
 # Func Hash:
@@ -840,8 +952,8 @@ _ZN11lexicon224x3cpu9Scheduler15whole_row_phaseIZNS0_4Host9run_untilEyEUlNS0_8Ro
 # Num Counters:
 2
 # Counter Values:
-69947271
-13820961
+80722790
+15902122
 
 _ZN11lexicon224x3cpu9Scheduler2atEyNS1_6ActionEb
 # Func Hash:
@@ -849,7 +961,7 @@ _ZN11lexicon224x3cpu9Scheduler2atEyNS1_6ActionEb
 # Num Counters:
 2
 # Counter Values:
-11416361
+3558390
 0
 
 _ZN11lexicon224x3cpu9Scheduler6Action4takeERS2_
@@ -858,8 +970,8 @@ _ZN11lexicon224x3cpu9Scheduler6Action4takeERS2_
 # Num Counters:
 2
 # Counter Values:
-34322553
-34322553
+10748640
+10748640
 
 _ZN11lexicon224x3cpu9Scheduler6Action5resetEv
 # Func Hash:
@@ -867,8 +979,8 @@ _ZN11lexicon224x3cpu9Scheduler6Action5resetEv
 # Num Counters:
 2
 # Counter Values:
-45738914
-11416361
+14307030
+3558390
 
 _ZN11lexicon224x3cpu9Scheduler6ActionC2EOS2_
 # Func Hash:
@@ -876,7 +988,7 @@ _ZN11lexicon224x3cpu9Scheduler6ActionC2EOS2_
 # Num Counters:
 1
 # Counter Values:
-34273573
+10699660
 
 _ZN11lexicon224x3cpu9Scheduler6ActionC2IZNS0_11FpcHeadroom16on_read_releasedEjyEUlvE_vEEOT_
 # Func Hash:
@@ -892,7 +1004,7 @@ _ZN11lexicon224x3cpu9Scheduler6ActionC2IZNS0_4Dmem10on_reset_nEbEUlvE_vEEOT_
 # Num Counters:
 1
 # Counter Values:
-8765120
+907149
 
 _ZN11lexicon224x3cpu9Scheduler6ActionC2IZNS0_4Dmem14on_port_strobeEjyEUlvE0_vEEOT_
 # Func Hash:
@@ -964,7 +1076,7 @@ _ZN11lexicon224x3cpu9Scheduler6ActionD2Ev
 # Num Counters:
 1
 # Counter Values:
-45689934
+14258050
 
 _ZN11lexicon224x3cpu9Scheduler6ActionaSEOS2_
 # Func Hash:
@@ -981,7 +1093,15 @@ _ZN11lexicon224x3cpu9Scheduler6ActionclEv
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
+
+_ZN11lexicon224x3cpu9Scheduler8set_timeEy
+# Func Hash:
+0
+# Num Counters:
+1
+# Counter Values:
+37526016
 
 _ZN11lexicon224x3cpu9Scheduler8stand_atEy
 # Func Hash:
@@ -1073,8 +1193,8 @@ _ZN11lexicon224x3cpu9WcsAccess9at_markerEbb
 # Num Counters:
 12
 # Counter Values:
-490300146
-464153150
+43071365
+16924369
 104587984
 634285
 26146996
@@ -1827,11 +1947,11 @@ _ZNK11lexicon224x3cpu13TcDiagnostics12pulse_activeEy
 # Num Counters:
 5
 # Counter Values:
-490300140
-459060893
-1651748
-459060893
-459060893
+63347440
+61708215
+367270
+61708215
+61708215
 
 _ZNK11lexicon224x3cpu13TcDiagnostics13DelayedInputs4readEy
 # Func Hash:
@@ -1839,8 +1959,8 @@ _ZNK11lexicon224x3cpu13TcDiagnostics13DelayedInputs4readEy
 # Num Counters:
 2
 # Counter Values:
-980601431
-980601023
+126696031
+126695623
 
 _ZNK11lexicon224x3cpu13TcDiagnostics14timing_monitorEv
 # Func Hash:
@@ -1889,7 +2009,7 @@ _ZNK11lexicon224x3cpu4Dmem11xreg_to_dspEv
 # Num Counters:
 1
 # Counter Values:
-980600286
+118019244
 
 _ZNK11lexicon224x3cpu4Dmem14run_level_highEv
 # Func Hash:
@@ -1897,7 +2017,7 @@ _ZNK11lexicon224x3cpu4Dmem14run_level_highEv
 # Num Counters:
 1
 # Counter Values:
-980600292
+533371511
 
 _ZNK11lexicon224x3cpu4Dmem17bus_test_registerEv
 # Func Hash:
@@ -1906,6 +2026,17 @@ _ZNK11lexicon224x3cpu4Dmem17bus_test_registerEv
 1
 # Counter Values:
 6
+
+_ZNK11lexicon224x3cpu4Dmem5quietEy
+# Func Hash:
+26011607963
+# Num Counters:
+4
+# Counter Values:
+11575898
+11575887
+11035059
+0
 
 _ZNK11lexicon224x3cpu4Host11serial_dataEv
 # Func Hash:
@@ -2021,7 +2152,7 @@ _ZNK11lexicon224x3cpu9RowTiming6markerEy
 # Num Counters:
 1
 # Counter Values:
-1557066671
+226956215
 
 _ZNK11lexicon224x3cpu9Scheduler13next_cpu_timeEv
 # Func Hash:
@@ -2046,7 +2177,7 @@ _ZNK11lexicon224x3cpu9Scheduler3nowEv
 # Num Counters:
 1
 # Counter Values:
-1587553316
+194937637
 
 _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_11FpcHeadroom16on_read_releasedEjyEUlvE_EMUlPvE0_clES5_
 # Func Hash:
@@ -2078,7 +2209,7 @@ _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem10on_reset_nEbEUlvE_EMU
 # Num Counters:
 1
 # Counter Values:
-8765120
+907149
 
 _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem10on_reset_nEbEUlvE_EMUlPvE_clES5_
 # Func Hash:
@@ -2086,7 +2217,7 @@ _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem10on_reset_nEbEUlvE_EMU
 # Num Counters:
 1
 # Counter Values:
-8765120
+907149
 
 _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem10on_reset_nEbEUlvE_EMUlPvS5_E_clES5_S5_
 # Func Hash:
@@ -2094,7 +2225,7 @@ _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem10on_reset_nEbEUlvE_EMU
 # Num Counters:
 1
 # Counter Values:
-26344338
+2770425
 
 _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_4Dmem14on_port_strobeEjyEUlvE0_EMUlPvE0_clES5_
 # Func Hash:
@@ -2288,19 +2419,27 @@ _ZNK11lexicon224x3cpu9Scheduler6Action7ops_forIZNS0_9WcsAccess5grantERNS3_7Reque
 # Counter Values:
 1887969
 
+_ZNK11lexicon224x3cpu9Scheduler9no_eventsEv
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+25947762
+
 _ZNK11lexicon224x3cpu9Scheduler9offset_ofENS0_8RowPhaseE
 # Func Hash:
 15480972859137949122
 # Num Counters:
 7
 # Counter Values:
-2451500730
+273236260
 0
-490300146
-490300146
-490300146
-490300146
-490300146
+54647252
+54647252
+54647252
+54647252
+54647252
 
 _ZNK11lexicon224x3cpu9WcsAccess4heldEy
 # Func Hash:
@@ -2319,14 +2458,24 @@ _ZNK11lexicon224x3cpu9WcsAccess4heldEy
 6388912
 6388912
 
+_ZNK11lexicon224x3cpu9WcsAccess4idleEy
+# Func Hash:
+6350812
+# Num Counters:
+3
+# Counter Values:
+28009124
+12089245
+11575898
+
 _ZNK11lexicon224x3cpu9WcsAccess9displacedEy
 # Func Hash:
 3085405626294456049
 # Num Counters:
 10
 # Counter Values:
-490300146
-488381937
+43071365
+41153156
 5723919
 649639
 1283924
@@ -2342,7 +2491,7 @@ _ZNK11lexicon224x3cpu9WcsAccess9holds_endEv
 # Num Counters:
 1
 # Counter Values:
-490300143
+43071362
 
 _ZNK11lexicon224x3sbc6Remote10next_eventEv
 # Func Hash:
@@ -2714,7 +2863,7 @@ _ZNKSt3__110unique_ptrIN11lexicon224x7MachineENS_14default_deleteIS2_EEEdeB8ne20
 # Num Counters:
 1
 # Counter Values:
-1961200581
+1513971800
 
 _ZNKSt3__110unique_ptrIN11lexicon224x7MachineENS_14default_deleteIS2_EEEptB8ne200100Ev
 # Func Hash:
@@ -2722,7 +2871,7 @@ _ZNKSt3__110unique_ptrIN11lexicon224x7MachineENS_14default_deleteIS2_EEEptB8ne20
 # Num Counters:
 1
 # Counter Values:
-10124610118
+9329421771
 
 _ZNKSt3__110unique_ptrINS_10__function6__funcIZN11lexicon224x6analog8AnalogIOC1ERNS3_3cpu4HostEbEUlRKNS6_10AudioEventEE_NS_9allocatorISC_EEFvSB_EEENS_22__allocator_destructorINSD_ISG_EEEEE3getB8ne200100Ev
 # Func Hash:
@@ -2925,7 +3074,7 @@ _ZNKSt3__111__wrap_iterIPN11lexicon224x3cpu9Scheduler5EventEE4baseB8ne200100Ev
 # Num Counters:
 1
 # Counter Values:
-45689936
+14258052
 
 _ZNKSt3__111__wrap_iterIPN11lexicon224x3cpu9Scheduler5EventEEdeB8ne200100Ev
 # Func Hash:
@@ -4194,7 +4343,7 @@ _ZNKSt3__123__optional_storage_baseIyLb0EE9has_valueB8ne200100Ev
 # Num Counters:
 1
 # Counter Values:
-1135703918
+264398141
 
 _ZNKSt3__126__end_marked_subexpressionIcE6__execERNS_7__stateIcEE
 # Func Hash:
@@ -4694,7 +4843,7 @@ _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE17__ann
 # Num Counters:
 1
 # Counter Values:
-11416364
+3558393
 
 _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE4sizeB8ne200100Ev
 # Func Hash:
@@ -4702,7 +4851,7 @@ _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE4sizeB8
 # Num Counters:
 1
 # Counter Values:
-11416370
+3558399
 
 _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5emptyB8ne200100Ev
 # Func Hash:
@@ -4710,7 +4859,7 @@ _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5emptyB
 # Num Counters:
 1
 # Counter Values:
-2582797729
+413387399
 
 _ZNKSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE8capacityB8ne200100Ev
 # Func Hash:
@@ -5808,7 +5957,7 @@ _ZNKSt3__18optionalIyEcvbB8ne200100Ev
 # Num Counters:
 1
 # Counter Values:
-1135703918
+264398141
 
 _ZNKSt3__19basic_iosIcNS_11char_traitsIcEEE10exceptionsB8ne200100Ev
 # Func Hash:
@@ -5882,7 +6031,7 @@ _ZNRSt3__123__optional_storage_baseIyLb0EE5__getB8ne200100Ev
 # Num Counters:
 1
 # Counter Values:
-460582126
+44020364
 
 _ZNRSt3__18optionalIyEdeB8ne200100Ev
 # Func Hash:
@@ -5890,7 +6039,7 @@ _ZNRSt3__18optionalIyEdeB8ne200100Ev
 # Num Counters:
 1
 # Counter Values:
-460582126
+44020364
 
 _ZNSt12length_errorC2B8ne200100EPKc
 # Func Hash:
@@ -6270,7 +6419,7 @@ _ZNSt3__110__pop_heapB8ne200100INS_17_ClassicAlgPolicyEPFbRKN11lexicon224x3cpu9S
 # Num Counters:
 3
 # Counter Values:
-11416361
+3558390
 12246
 12246
 
@@ -6296,7 +6445,7 @@ _ZNSt3__110destroy_atB8ne200100IZN11lexicon224x3cpu4Dmem10on_reset_nEbEUlvE_Li0E
 # Num Counters:
 1
 # Counter Values:
-35109458
+3677574
 
 _ZNSt3__110destroy_atB8ne200100IZN11lexicon224x3cpu4Dmem14on_port_strobeEjyEUlvE0_Li0EEEvPT_
 # Func Hash:
@@ -6732,7 +6881,7 @@ _ZNSt3__111__push_heapB8ne200100INS_17_ClassicAlgPolicyENS_11__wrap_iterIPN11lex
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__111__sort_implB8ne200100INS_17_ClassicAlgPolicyENS_11__wrap_iterIPdEENS_6__lessIvvEEEEvT0_S7_RT1_
 # Func Hash:
@@ -6789,7 +6938,7 @@ _ZNSt3__111__wrap_iterIPN11lexicon224x3cpu9Scheduler5EventEEC2B8ne200100ES5_
 # Num Counters:
 1
 # Counter Values:
-45665444
+14233560
 
 _ZNSt3__111__wrap_iterIPN11lexicon224x3cpu9Scheduler5EventEEmmB8ne200100Ev
 # Func Hash:
@@ -7988,7 +8137,7 @@ _ZNSt3__112__destroy_atB8ne200100IN11lexicon224x3cpu9Scheduler5EventELi0EEEvPT_
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__112__destroy_atB8ne200100INS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEELi0EEEvPT_
 # Func Hash:
@@ -8084,7 +8233,7 @@ _ZNSt3__112__destroy_atB8ne200100IZN11lexicon224x3cpu4Dmem10on_reset_nEbEUlvE_Li
 # Num Counters:
 1
 # Counter Values:
-35109458
+3677574
 
 _ZNSt3__112__destroy_atB8ne200100IZN11lexicon224x3cpu4Dmem14on_port_strobeEjyEUlvE0_Li0EEEvPT_
 # Func Hash:
@@ -8220,7 +8369,7 @@ _ZNSt3__112__to_addressB8ne200100IN11lexicon224x3cpu9Scheduler5EventEEEPT_S6_
 # Num Counters:
 1
 # Counter Values:
-22832731
+7116789
 
 _ZNSt3__112__to_addressB8ne200100INS_11__wrap_iterIPKcEELi0EEEu7__decayIDTclsr19__to_address_helperIT_EE6__callclsr3stdE7declvalIRKS5_EEEEES7_
 # Func Hash:
@@ -9157,7 +9306,7 @@ _ZNSt3__112construct_atB8ne200100IN11lexicon224x3cpu9Scheduler5EventEJS4_EPS4_EE
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__112construct_atB8ne200100INS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEJRKS6_EPS6_EEPT_SB_DpOT0_
 # Func Hash:
@@ -9431,7 +9580,7 @@ _ZNSt3__113__max_elementB8ne200100IRNS_6__lessIvvEENS_11__wrap_iterIPdEEEET0_S7_
 12
 12
 89018
-130
+111
 
 _ZNSt3__113__max_elementB8ne200100IRNS_6__lessIvvEEPKyEET0_S6_S6_T_
 # Func Hash:
@@ -9719,7 +9868,7 @@ _ZNSt3__114__construct_atB8ne200100IN11lexicon224x3cpu9Scheduler5EventEJS4_EPS4_
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__114__construct_atB8ne200100INS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEJRKS6_EPS6_EEPT_SB_DpOT0_
 # Func Hash:
@@ -11456,7 +11605,7 @@ _ZNSt3__116allocator_traitsINS_9allocatorIN11lexicon224x3cpu9Scheduler5EventEEEE
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__116allocator_traitsINS_9allocatorIN11lexicon224x3cpu9Scheduler5EventEEEE8max_sizeB8ne200100IS6_vLi0EEEmRKS6_
 # Func Hash:
@@ -11472,7 +11621,7 @@ _ZNSt3__116allocator_traitsINS_9allocatorIN11lexicon224x3cpu9Scheduler5EventEEEE
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__116allocator_traitsINS_9allocatorINS_10__function6__funcIZN11lexicon224x6analog8AnalogIOC1ERNS4_3cpu4HostEbEUlRKNS7_10AudioEventEE_NS1_ISD_EEFvSC_EEEEEE10deallocateB8ne200100ERSH_PSG_m
 # Func Hash:
@@ -16766,7 +16915,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE11__make
 # Num Counters:
 1
 # Counter Values:
-45665444
+14233560
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE12emplace_backIJS4_EEERS4_DpOT_
 # Func Hash:
@@ -16774,8 +16923,8 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE12emplac
 # Num Counters:
 2
 # Counter Values:
-11416361
-11416361
+3558390
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE16__destroy_vectorC2B8ne200100ERS7_
 # Func Hash:
@@ -16800,7 +16949,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE17__dest
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE20__throw_length_errorB8ne200100Ev
 # Func Hash:
@@ -16816,7 +16965,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE21_Const
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE21_ConstructTransactionD2B8ne200100Ev
 # Func Hash:
@@ -16824,7 +16973,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE21_Const
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE22__base_destruct_at_endB8ne200100EPS4_
 # Func Hash:
@@ -16832,8 +16981,8 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE22__base
 # Num Counters:
 2
 # Counter Values:
-11416364
-11416361
+3558393
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE22__construct_one_at_endB8ne200100IJS4_EEEvDpOT_
 # Func Hash:
@@ -16841,7 +16990,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE22__cons
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE24__emplace_back_slow_pathIJS4_EEEPS4_DpOT_
 # Func Hash:
@@ -16857,8 +17006,8 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE26__add_
 # Num Counters:
 2
 # Counter Values:
-45665444
-45665444
+14233560
+14233560
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE26__swap_out_circular_bufferERNS_14__split_bufferIS4_RS6_EE
 # Func Hash:
@@ -16874,7 +17023,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE3endB8ne
 # Num Counters:
 1
 # Counter Values:
-22832722
+7116780
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE4backB8ne200100Ev
 # Func Hash:
@@ -16882,7 +17031,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE4backB8n
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5beginB8ne200100Ev
 # Func Hash:
@@ -16890,7 +17039,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5beginB8
 # Num Counters:
 1
 # Counter Values:
-22832722
+7116780
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5clearB8ne200100Ev
 # Func Hash:
@@ -16906,7 +17055,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE5frontB8
 # Num Counters:
 1
 # Counter Values:
-31855706
+23997735
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE7reserveEm
 # Func Hash:
@@ -16924,7 +17073,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE8pop_bac
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE9push_backB8ne200100EOS4_
 # Func Hash:
@@ -16932,7 +17081,7 @@ _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEE9push_ba
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__16vectorIN11lexicon224x3cpu9Scheduler5EventENS_9allocatorIS4_EEEC2B8ne200100Ev
 # Func Hash:
@@ -19692,7 +19841,7 @@ _ZNSt3__18pop_heapB8ne200100INS_11__wrap_iterIPN11lexicon224x3cpu9Scheduler5Even
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__19__advanceB8ne200100INS_11__wrap_iterIPKcEEEEvRT_NS_15iterator_traitsIS5_E15difference_typeENS_26random_access_iterator_tagE
 # Func Hash:
@@ -19732,7 +19881,7 @@ _ZNSt3__19__sift_upB8ne200100INS_17_ClassicAlgPolicyERPFbRKN11lexicon224x3cpu9Sc
 # Num Counters:
 5
 # Counter Values:
-11416361
+3558390
 12246
 12244
 0
@@ -20404,7 +20553,7 @@ _ZNSt3__19push_heapB8ne200100INS_11__wrap_iterIPN11lexicon224x3cpu9Scheduler5Eve
 # Num Counters:
 1
 # Counter Values:
-11416361
+3558390
 
 _ZNSt3__19sub_matchINS_11__wrap_iterIPKcEEEC2B8ne200100Ev
 # Func Hash:
@@ -20615,7 +20764,7 @@ _ZNSt3__1miB8ne200100IPN11lexicon224x3cpu9Scheduler5EventES5_EEDTmicldtfp_4baseE
 # Num Counters:
 1
 # Counter Values:
-22832722
+7116780
 
 _ZNSt3__1miB8ne200100IPPNS_7__stateIcEES4_EEDTmicldtfp_4baseEcldtfp0_4baseEERKNS_13move_iteratorIT_EERKNS6_IT0_EE
 # Func Hash:
@@ -20818,7 +20967,7 @@ _ZZN11lexicon224x3cpu4Dmem10on_reset_nEbENKUlvE_clEv
 # Num Counters:
 1
 # Counter Values:
-8765120
+907149
 
 _ZZN11lexicon224x3cpu4Dmem14on_port_strobeEjyENKUlvE0_clEv
 # Func Hash:
@@ -20868,13 +21017,31 @@ _ZZN11lexicon224x3cpu4Dmem15on_port_releaseEjhyENKUlvE_clEv
 # Counter Values:
 344283
 
+_ZZN11lexicon224x3cpu4Host12monitor_byteEjENKUlRKNS0_13TcDiagnosticsEE_clES4_
+# Func Hash:
+13679692236883637725
+# Num Counters:
+3
+# Counter Values:
+1148
+1136
+6
+
 _ZZN11lexicon224x3cpu4Host13advance_ticksEyENKUlNS0_8RowPhaseEyE_clES2_y
 # Func Hash:
 0
 # Num Counters:
 1
 # Counter Values:
-2015613855
+39285790
+
+_ZZN11lexicon224x3cpu4Host13advance_ticksEyENKUlyyyE_clEyyy
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+7184924
 
 _ZZN11lexicon224x3cpu4Host7commandEvENKUlvE_clEv
 # Func Hash:
@@ -20906,7 +21073,15 @@ _ZZN11lexicon224x3cpu4Host9run_untilEyENKUlNS0_8RowPhaseEyE_clES2_y
 # Num Counters:
 1
 # Counter Values:
-435886872
+176071032
+
+_ZZN11lexicon224x3cpu4Host9run_untilEyENKUlyyyE_clEyyy
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+20824203
 
 _ZZN11lexicon224x3cpu9WcsAccess5grantERNS1_7RequestEENKUlvE_clEv
 # Func Hash:
