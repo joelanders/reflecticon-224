@@ -208,10 +208,11 @@ if wanted names; then
 	note "== product name agrees across files =="
 	cmd_name="$(sed -n 's/^PRODUCT="\(.*\)"$/\1/p' scripts/macsetup_remove_quarantine.command)"
 	lib_name="$(sed -n 's/.*productFolder = "\(.*\)";.*/\1/p' source/roms/rom_library.h)"
-	if [[ "$cmd_name" == "$PRODUCT" && "$lib_name" == "$PRODUCT" ]]; then
-		record PASS names "$PRODUCT in CMakeLists.txt, macsetup .command, rom_library.h"
+	support="$(cmake_value PLUGIN_SUPPORT_FOLDER)"
+	if [[ "$cmd_name" == "$PRODUCT" && "$lib_name" == "$support" ]]; then
+		record PASS names "$PRODUCT in CMakeLists.txt and macsetup .command; support folder $support in rom_library.h"
 	else
-		record FAIL names "CMakeLists.txt '$PRODUCT', macsetup .command '$cmd_name', rom_library.h productFolder '$lib_name'"
+		record FAIL names "CMakeLists.txt '$PRODUCT', macsetup .command '$cmd_name', rom_library.h productFolder '$lib_name' (want PLUGIN_SUPPORT_FOLDER '$support')"
 	fi
 fi
 
