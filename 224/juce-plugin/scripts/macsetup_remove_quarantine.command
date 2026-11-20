@@ -19,7 +19,7 @@
 
 # The product name: keep in step with PLUGIN_PRODUCT_NAME in CMakeLists.txt
 # (scripts/run_gates.sh checks that they agree).
-PRODUCT="Reflexion224"
+PRODUCT="Reflecticon224"
 
 # This script itself may be quarantined too.
 xattr -d com.apple.quarantine "$0" >/dev/null 2>&1 || true

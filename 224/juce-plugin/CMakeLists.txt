@@ -14,12 +14,21 @@ cmake_minimum_required(VERSION 3.22)
 # them later orphans saved sessions.
 # Four-character codes: the manufacturer code needs at least one capital;
 # ---------------------------------------------------------------------------
-set(PLUGIN_PRODUCT_NAME "Reflexion224")
-set(PLUGIN_COMPANY_NAME "Reflexion224")
+# Renamed from Reflexion224 with the move to the reflecticon repository: the codes are unchanged,
+# so saved sessions still find it, but the bundle files have new names and the old ones must be
+# removed. PRODUCT_NAME names the bundle files (no spaces); PLUGIN_NAME is what hosts show; the
+# manufacturer code Rflx is shared by every reflecticon plugin. (Keep each set() on one line with
+# nothing after it: scripts/run_gates.sh reads them.)
+set(PLUGIN_PRODUCT_NAME "Reflecticon224")
+set(PLUGIN_NAME "Reflecticon 224")
+set(PLUGIN_COMPANY_NAME "joelanders")
 set(PLUGIN_MANUFACTURER_CODE Rflx)
 set(PLUGIN_CODE Rf24)
-set(PLUGIN_BUNDLE_ID "net.joelanders.reflexion224")
-set(PLUGIN_TARGET Reflexion224)
+set(PLUGIN_BUNDLE_ID "net.joelanders.reflecticon.224")
+set(PLUGIN_TARGET Reflecticon224)
+# The Application Support folder (ROM drop folder and settings): kept from the old name so existing
+# users keep their ROMs. scripts/run_gates.sh checks rom_library.h agrees.
+set(PLUGIN_SUPPORT_FOLDER "Reflexion224")
 
 project(${PLUGIN_TARGET} VERSION 0.1.2 LANGUAGES C CXX)
 if(APPLE)
@@ -109,6 +118,7 @@ endif()
 
 juce_add_plugin(${PLUGIN_TARGET}
     PRODUCT_NAME "${PLUGIN_PRODUCT_NAME}"
+    PLUGIN_NAME "${PLUGIN_NAME}"
     COMPANY_NAME "${PLUGIN_COMPANY_NAME}"
     BUNDLE_ID "${PLUGIN_BUNDLE_ID}"
     PLUGIN_MANUFACTURER_CODE ${PLUGIN_MANUFACTURER_CODE}

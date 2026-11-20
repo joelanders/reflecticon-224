@@ -34,7 +34,8 @@ namespace lexplug::roms {
 
 class RomLibrary {
 public:
-    // The one place the product's folder/settings name lives.
+    // The one place the product's folder/settings name lives: PLUGIN_SUPPORT_FOLDER in
+    // CMakeLists.txt, kept from the plugin's old name (Reflexion224) so existing users keep their ROMs.
     static constexpr const char *productFolder = "Reflexion224";
     static constexpr const char *envVar = "LEXICON224_ROMPATH";
     static constexpr const char *settingsKey = "romPath";
