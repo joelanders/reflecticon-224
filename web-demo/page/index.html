@@ -47,15 +47,17 @@ Known chips are recognized by content, whatever their names. They stay in this b
 <h3>Input</h3>
 <label>Source <select id="source">
   <option value="riff" selected>Aphex Twin riff on an SH-101 (loops)</option>
-  <option value="click">click once a second</option>
-  <option value="impulse">single-sample impulse (for measuring)</option>
-  <option value="silence">silence</option>
-  <option value="sine">sine 440 Hz</option>
+  <option value="drums">drum loop</option>
+  <option value="pluck">guitar plucks</option>
+  <option value="click">clicks</option>
+  <option value="impulse">impulse (for measuring)</option>
   <option value="noise">noise bursts</option>
-  <option value="mic">microphone / line in (use headphones)</option>
+  <option value="sine">sine 440 Hz</option>
+  <option value="silence">silence</option>
+  <option value="mic">microphone / line in</option>
   <option value="file" id="fileOption">your own audio file…</option>
 </select></label>
-<label title="How often the click, the impulse, the noise burst, the riff or your file starts again (a file's own length loops it seamlessly; longer adds silence after it).">repeat every <input type="range" id="period" min="0.25" max="20" step="0.05" value="1"> <span id="periodText">1.00 s</span></label>
+<label title="How often the click, the impulse, the noise burst, the riff, the drums, the plucks or your file starts again (the riff, the drums, the plucks and a file set it to their own length, so they loop seamlessly; longer adds silence after them).">repeat every <input type="range" id="period" min="0.25" max="20" step="0.05" value="1"> <span id="periodText">1.00 s</span></label>
 <input type="file" id="audioFile" accept="audio/*" hidden>
 <p id="riffCredit" class="hint" hidden>Thank you to <a href="https://www.solonmusic.com/" target="_blank" rel="noopener">SOLON Music</a> for the dry recording. Inspired by his <a href="https://www.youtube.com/watch?v=5cbjUZhDyXs" target="_blank" rel="noopener">224 video</a> and his <a href="https://www.youtube.com/watch?v=X-hGwcU-Ckw" target="_blank" rel="noopener">224XL video</a>.</p>
 <br>
