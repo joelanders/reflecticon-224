@@ -156,6 +156,28 @@ public:
 
     // ---- Outputs ----
 
+    // Lean rows: at_execute(next_marker) would do nothing, and
+    // on_reset_n(low) would change nothing.
+    bool quiet(Tick next_marker) const {
+        return !cpc_cleared_at && !(clear_active_from && next_marker < clear_active_until);
+    }
+
+    // Lean rows: on_reset_n() for a lean row, with the inverter's
+    // effect applied at once instead of 15 ns later. Nothing reads RESET or
+    // the run/halt latches inside that 15 ns: the row's remaining phase is
+    // the converter clock, and a lean row runs only when no bus effect waits.
+    LEXICON_ALWAYS_INLINE void reset_n_lean(bool low) {
+        if (low == !reset_n) {
+            return;
+        }
+        if (low) {
+            reset_edges++;
+        }
+        reset = low;
+        settle_latches();
+        reset_n = !low;
+    }
+
     // HALT/ high: the DSP program counter runs.
     bool run_level_high() const {
         return halt_n == Level::High;

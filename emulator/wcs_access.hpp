@@ -146,6 +146,12 @@ public:
         return windows_end;
     }
 
+    // Lean rows: no request waits, and no granted access displaces a
+    // fetch or holds a clock at or after `marker`.
+    bool idle(Tick marker) const {
+        return waiting == 0 && marker > windows_end;
+    }
+
     uint64_t writes_committed() const {
         return writes;
     }

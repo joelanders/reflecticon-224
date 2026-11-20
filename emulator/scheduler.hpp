@@ -113,6 +113,7 @@ public:
         const Ops *ops_ = nullptr;
     };
 
+    bool rows_first = false;    // lean rows: see run_dsp_until
     RowTiming timing = timing_224x;     // the model's row timing (timing.hpp); set before the first step
 
     // Room for the pending actions up front: a handful are pending at any
@@ -209,6 +210,15 @@ public:
     // date when a bus cycle reaches it). Phases go to run_phase(RowPhase, row_number).
     template <class RunPhase>
     void run_dsp_until(Tick deadline, RunPhase &&run_phase) {
+        run_dsp_until(deadline, run_phase, [](Tick, uint64_t, uint64_t) { return uint64_t(0); });
+    }
+
+    // Lean rows: as above; the whole rows that fit before the deadline
+    // are first offered to lean_rows(marker, row_number, count), which runs
+    // some of them from the first on (leaving the clock at the last one's
+    // last phase, with set_time()) and returns how many: 0 for none.
+    template <class RunPhase, class LeanRows>
+    void run_dsp_until(Tick deadline, RunPhase &&run_phase, LeanRows &&lean_rows) {
         while (true) {
             // A whole row at once (the common case: no bus effect waiting, the
             // row's last phase before the deadline): its five phases in
@@ -219,6 +229,11 @@ public:
                 Tick marker = next_phase_time();
                 if (marker + cached_offsets[phase_count - 1] <= deadline) {
                     uint64_t row = row_index;
+                    uint64_t fit = (deadline - marker - cached_offsets[phase_count - 1]) / timing.row + 1;
+                    if (uint64_t ran = lean_rows(marker, row, fit)) {
+                        row_index += ran;
+                        continue;
+                    }
                     if (whole_row_phase(marker, RowPhase::Begin, row, run_phase) &&
                         whole_row_phase(marker, RowPhase::ExecutePrevious, row - 1, run_phase) &&
                         whole_row_phase(marker, RowPhase::Fetch, row, run_phase) &&
@@ -254,6 +269,9 @@ public:
             run_next_phase(run_phase);
             // While no bus effect is waiting, the phases run back to back.
             while (events.empty()) {
+                if (rows_first && phase == 0) {
+                    break;      // Lean rows: back to the top, where a whole row can go at once
+                }
                 Tick next = next_phase_time();
                 if (next > deadline) {
                     break;
@@ -261,6 +279,15 @@ public:
                 run_next_phase(run_phase);
             }
         }
+    }
+
+    // Lean rows: for a lean row (host.hpp) to move the clock.
+    void set_time(Tick t) {
+        time = t;
+    }
+
+    bool no_events() const {
+        return events.empty();
     }
 
     // When the CPU's next state runs (set_cpu_time), and the clock moved there.

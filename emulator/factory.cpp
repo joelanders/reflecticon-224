@@ -129,6 +129,11 @@ int main(int argc, char **argv) try {
     std::string prefix = argv[3];
     auto host = std::make_unique<Host>();
     Host &h = *host;
+    // LEX224X_LEAN=0..3: how the DSP rows run (Host::set_lean), so that
+    // tests/qualify_firmware.py can qualify each level. Default: the host's.
+    if (const char *level = std::getenv("LEX224X_LEAN")) {
+        h.set_lean(std::atoi(level));
+    }
     load_factory(h, argv[1]);
     for (unsigned pc : {0x028c, 0x0294, 0x059c, 0x05c8, 0x05cc, 0x05cd, 0x05dd, 0x0b61}) {
         h.pc_watches[pc] = true;
@@ -191,6 +196,7 @@ int main(int argc, char **argv) try {
     if (h.remote.connected) {
         std::cout << "L " << std::string(h.remote.display.begin(), h.remote.display.end()) << '\n';
     }
+    std::cerr << "rows: lean level " << h.lean << ", " << h.lean_rows << " lean, " << h.exact_rows << " exact\n";
     return 0;
 } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

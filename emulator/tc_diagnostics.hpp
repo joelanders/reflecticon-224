@@ -50,10 +50,15 @@ public:
     // previous row), and the sign latch (U20): the sign of the multiply whose
     // partial products the ARU adds this row, one microinstruction older.
     LEXICON_ALWAYS_INLINE void at_marker(uint32_t marker_microinstruction, bool sign_latch) {
+        at_marker(marker_microinstruction, sign_latch, scheduler.now());
+    }
+
+    // Lean rows: the same with the marker's time given (`now`), so a
+    // row that ran without the monitors can be brought in afterwards.
+    LEXICON_ALWAYS_INLINE void at_marker(uint32_t marker_microinstruction, bool sign_latch, Tick now) {
         this->marker_microinstruction = marker_microinstruction;
         dport4 = {marker_microinstruction, sign_latch, false, false, 0, true};
-        dport5.set({marker_microinstruction, false, false, false, 0, true}, scheduler.now(),
-                   scheduler.now() + dport5_visible);
+        dport5.set({marker_microinstruction, false, false, false, 0, true}, now, now + dport5_visible);
         if (trace) {
             Tick row_marker = scheduler.now();
             trace->dport(row_marker, DportEvent::MicroinstructionShown);
@@ -70,6 +75,11 @@ public:
     // After the row's ARU clocks: what the T&C drove at each (`clocked`) and
     // the ARU's SAT at each. U9 samples them 25 ns after each clock.
     LEXICON_ALWAYS_INLINE void at_arithmetic(const Aruck (&clocked)[3], unsigned saturated, Tick row_marker) {
+        at_arithmetic(clocked, saturated, row_marker, scheduler.now());
+    }
+
+    // Lean rows: the same with the execute phase's time given (`now`).
+    LEXICON_ALWAYS_INLINE void at_arithmetic(const Aruck (&clocked)[3], unsigned saturated, Tick row_marker, Tick now) {
         if (saturated == 0) {
             // No SAT at any edge (nearly every row): the one-shot cannot
             // trigger, and U9's contents after each edge follow from this
@@ -85,7 +95,7 @@ public:
             uint8_t after_edge1 = uint8_t(s0_xor_s1[1] | m0_xor_m1[0] << 1 | s0_xor_s1[0] << 2 | m0_xor_m1[1] << 3);
             bool saturation = pulse_active(row_marker + dport3_sample);
             bool held = clocked[1].operand == OperandClock::Hold && clocked[2].operand == OperandClock::Hold;
-            dport3.set({marker_microinstruction, false, saturation, held, after_edge1, true}, scheduler.now(),
+            dport3.set({marker_microinstruction, false, saturation, held, after_edge1, true}, now,
                        row_marker + dport3_visible);
             aru_history = uint8_t(s0_xor_s1[2] | m0_xor_m1[1] << 1 | s0_xor_s1[1] << 2 | m0_xor_m1[2] << 3);
             last_sat_sample = false;
@@ -93,7 +103,7 @@ public:
         }
         sample_arithmetic(clocked[0], bit(saturated, 0), row_marker, 0);
         sample_arithmetic(clocked[1], bit(saturated, 1), row_marker, 1);
-        sample_dport3(clocked, row_marker);
+        sample_dport3(clocked, row_marker, now);
         sample_arithmetic(clocked[2], bit(saturated, 2), row_marker, 2);
     }
 
@@ -244,10 +254,10 @@ private:
         last_sat_sample = sat;
     }
 
-    void sample_dport3(const Aruck (&clocked)[3], Tick row_marker) {
+    void sample_dport3(const Aruck (&clocked)[3], Tick row_marker, Tick now) {
         bool saturation = last_sat_sample || pulse_active(row_marker + dport3_sample);
         bool held = clocked[1].operand == OperandClock::Hold && clocked[2].operand == OperandClock::Hold;
-        dport3.set({marker_microinstruction, false, saturation, held, aru_history, true}, scheduler.now(),
+        dport3.set({marker_microinstruction, false, saturation, held, aru_history, true}, now,
                    row_marker + dport3_visible);
     }
 

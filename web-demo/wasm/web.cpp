@@ -72,6 +72,13 @@ EMSCRIPTEN_KEEPALIVE int lex_render(Web *w, const float *in_left, const float *i
     }
 }
 
+// How the DSP rows run (Host::set_lean): 2 is the default, 0 every row
+// through the scheduler's phases. Every level gives the same output; for
+// measuring and testing.
+EMSCRIPTEN_KEEPALIVE void lex_set_lean(Web *w, int level) {
+    w->host->set_lean(level);
+}
+
 // 1: model the analog boards (default); 0: bypass them, the nearest-sample
 // path this file used before, for A/B listening.
 EMSCRIPTEN_KEEPALIVE void lex_set_analog(Web *w, int on) {
