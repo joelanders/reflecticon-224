@@ -51,6 +51,7 @@ public:
     // session.
     bool hasPanel() const { return !type_.info.panel.empty(); }
     bool hardwareMode() const { return hasPanel() && hardware_; }
+    float editorScale = 1.0f;   // the editor window's size against its native layout (saved)
     void setHardwareMode(bool on) { hardware_ = on; }
     // Take settings the panel put the machine in into the host parameters (PanelState::adopt).
     // Called by the timer; public for tools that run without a message loop.
@@ -70,6 +71,11 @@ private:
     juce::String status_ = "no ROMs";
     std::unique_ptr<juce::PropertiesFile> settings_;
     juce::AudioBuffer<float> scratch_;   // the mono mix, and a copy of a mono input
+    static constexpr int kDryRing = 1 << 16;   // the dry signal, delayed by the latency for the mix
+    juce::AudioBuffer<float> dry_;
+    int dryAt_ = 0;
+    std::atomic<float>* mix_ = nullptr;
+    float mixPrev_ = 1.0f;
     int maxBlock_ = 0;
     bool hardware_ = false;
     uint32_t adoptedSerial_ = 0;

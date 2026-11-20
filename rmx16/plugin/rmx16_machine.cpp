@@ -232,6 +232,20 @@ kit::Info make_info() {
         {"hf", "Decay HF", K::Int, -9, 0, -4, {}, ""},
         {"swap", "Swap outputs", K::Bool, 0, 1, 0, {}, ""},
     };
+    kit::describe(i.params, {
+        {"program",
+         "The reverb program, run by the unit's own firmware."},
+        {"predelay",
+         "Delay before the reverb starts."},
+        {"decay",
+         "Reverb time in seconds."},
+        {"lf",
+         "Low-frequency decay against the main decay: + rings longer, - shorter. Not every program has it."},
+        {"hf",
+         "High-frequency decay against the main decay: lower values darken the tail. Not every program has it."},
+        {"swap",
+         "Swaps the two outputs (DAC A and DAC B)."},
+    });
     i.roms = {
         {"boot ROM R316", {2048, 4096}, {{"eb88029bea7fd6757b6e56ad35d6eeee8f15e1893ae08c993a24cac07854a04c", "R316"}}, {"r316", "316"}},
         {"IC1", {4096}, {{"bb2ca8a62a4631f0b923b92cb0d01aa15bf878371799df67dc3c77ec6daeeaba", "v3.2"}}, {"ic1"}},

@@ -26,6 +26,11 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout(const Info
             break;
         }
     }
+    // The kit's own: wet/dry, after the machine (the hardware gives the effect only).
+    l.add(std::make_unique<AudioParameterFloat>(
+        ParameterID{"mix", 1}, "Mix", NormalisableRange<float>(0.0f, 100.0f), 100.0f,
+        AudioParameterFloatAttributes().withLabel("%").withStringFromValueFunction(
+            [](float v, int) { return String(roundToInt(v)) + " % wet"; })));
     return l;
 }
 
@@ -37,6 +42,7 @@ Processor::Processor(const MachineType& type)
     std::vector<const std::atomic<float>*> raw;
     for (auto& p : type_.info.params) raw.push_back(params.getRawParameterValue(p.id));
     host_ = std::make_unique<Host>(type_, raw);
+    mix_ = params.getRawParameterValue("mix");
     // a new instance opens the easy editor; KIT_EDITOR=hardware opens the panel (tests, pluginval)
     if (const char* ed = std::getenv("KIT_EDITOR"); ed && std::string(ed) == "hardware") hardware_ = true;
     findRomsAtStart();
@@ -169,6 +175,10 @@ void Processor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     host_->prepare(int(std::lround(sampleRate)), maxBlock_);
     setLatencySamples(int(host_->latency()));
     scratch_.setSize(2, maxBlock_);
+    dry_.setSize(2, kDryRing);
+    dry_.clear();
+    dryAt_ = 0;
+    mixPrev_ = mix_->load() * 0.01f;
 }
 
 bool Processor::isBusesLayoutSupported(const BusesLayout& layouts) const {
@@ -200,8 +210,29 @@ void Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&
             std::copy(l, l + k, s0);
             std::copy(r, r + k, s1);
         }
+        // the dry signal, for the mix: kept until the machine's latency has passed
+        float* d0 = dry_.getWritePointer(0);
+        float* d1 = dry_.getWritePointer(1);
+        for (int i = 0; i < k; i++) {
+            d0[(dryAt_ + i) & (kDryRing - 1)] = l[i];
+            d1[(dryAt_ + i) & (kDryRing - 1)] = r[i];
+        }
         const float* ins[2] = {s0, s1};
-        host_->process(ins, buffer.getWritePointer(0, at), buffer.getWritePointer(1, at), k);
+        float* o0 = buffer.getWritePointer(0, at);
+        float* o1 = buffer.getWritePointer(1, at);
+        host_->process(ins, o0, o1, k);
+        const float mix = std::clamp(mix_->load() * 0.01f, 0.0f, 1.0f);
+        if (mix < 1.0f || mixPrev_ < 1.0f) {
+            const int lat = std::clamp(getLatencySamples(), 0, kDryRing - maxBlock_ - 1);
+            for (int i = 0; i < k; i++) {
+                const float m = mixPrev_ + (mix - mixPrev_) * float(i + 1) / float(k);   // no zipper
+                const int j = (dryAt_ + i - lat) & (kDryRing - 1);
+                o0[i] = o0[i] * m + d0[j] * (1.0f - m);
+                o1[i] = o1[i] * m + d1[j] * (1.0f - m);
+            }
+        }
+        mixPrev_ = mix;
+        dryAt_ = (dryAt_ + k) & (kDryRing - 1);
     }
 }
 
@@ -210,6 +241,7 @@ juce::AudioProcessorEditor* Processor::createEditor() { return new Editor(*this)
 void Processor::getStateInformation(juce::MemoryBlock& destData) {
     juce::ValueTree t(juce::Identifier(type_.info.state_tag));
     t.setProperty("version", 1, nullptr);
+    t.setProperty("editorScale", editorScale, nullptr);
     t.setProperty("roms", romPaths_.joinIntoString("\n"), nullptr);
     if (hasPanel()) {
         t.setProperty("editor", hardware_ ? "hardware" : "easy", nullptr);
@@ -228,6 +260,7 @@ void Processor::setStateInformation(const void* data, int sizeInBytes) {
     auto t = juce::ValueTree::readFromData(data, size_t(sizeInBytes));
     if (!t.hasType(juce::Identifier(type_.info.state_tag))) return;
     if (auto p = t.getChildWithName(params.state.getType()); p.isValid()) params.replaceState(p);
+    if (t.hasProperty("editorScale")) editorScale = std::clamp(float(t.getProperty("editorScale")), 0.5f, 3.0f);
     if (hasPanel()) {
         hardware_ = t.getProperty("editor").toString() == "hardware";
         if (auto in = t.getChildWithName("panelInputs"); in.isValid())

@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
     proc->host().refresh_readouts();
     std::unique_ptr<juce::AudioProcessorEditor> ed(proc->createEditor());
     ed->setVisible(true);
+    if (const char* sc = std::getenv("KIT_SHOT_SCALE"))   // the window resized by the user
+        ed->setSize(int(ed->getWidth() * std::atof(sc)), int(ed->getHeight() * std::atof(sc)));
     auto img = ed->createComponentSnapshot(ed->getLocalBounds(), true, 2.0f);
     juce::File out(juce::File::getCurrentWorkingDirectory().getChildFile(argc > 1 ? argv[1] : "editor.png"));
     out.deleteFile();

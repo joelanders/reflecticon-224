@@ -28,6 +28,7 @@ private:
     void chooseRoms();
     void setMode(bool hardware);
     void layoutSize();
+    void layoutNative();
 
     struct Row {
         juce::Label name, readout;
@@ -53,6 +54,7 @@ private:
     std::vector<Preset> presetList_;
     std::unique_ptr<juce::FileChooser> chooser_;
     bool hasPanel_ = false;
+    int nativeW_ = 0, nativeH_ = 0;   // the layout's own size; the window shows it scaled
     uint64_t seenUpdates_ = ~0ull;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Editor)

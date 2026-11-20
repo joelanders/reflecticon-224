@@ -51,6 +51,25 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
             r->sa = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(proc_.params, prm.id, *r->slider);
         }
         addAndMakeVisible(r->control());
+        r->name.setTooltip(prm.help);
+        if (auto* tc = dynamic_cast<juce::SettableTooltipClient*>(r->control())) tc->setTooltip(prm.help);
+        rows_.push_back(std::move(r));
+    }
+    {   // the kit's wet/dry, after the machine's own controls
+        auto r = std::make_unique<Row>();
+        r->name.setText("Mix", juce::dontSendNotification);
+        r->name.setColour(juce::Label::textColourId, kText);
+        r->readout.setColour(juce::Label::textColourId, kAccent);
+        r->readout.setJustificationType(juce::Justification::centredRight);
+        r->readout.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+        r->slider = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::NoTextBox);
+        r->sa = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(proc_.params, "mix", *r->slider);
+        const char* help = "Dry signal against the effect, after the machine: 100 % is the effect alone, as the hardware gives it.";
+        r->name.setTooltip(help);
+        r->slider->setTooltip(help);
+        addAndMakeVisible(r->name);
+        addAndMakeVisible(r->readout);
+        addAndMakeVisible(r->control());
         rows_.push_back(std::move(r));
     }
 
@@ -77,6 +96,7 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
         addAndMakeVisible(modeButton_);
     }
     timerCallback();
+    setResizable(true, true);   // scaled as a whole, its proportions kept (layoutSize)
     setMode(proc_.hardwareMode());
     startTimerHz(30);
 }
@@ -98,14 +118,22 @@ void Editor::setMode(bool hardware) {
     layoutSize();
 }
 
+// The layout is made at a native size (one per mode) and drawn scaled to the window: the window
+// keeps the native proportions, between half and three times the native size.
 void Editor::layoutSize() {
     if (proc_.hardwareMode()) {
         const auto& L = proc_.info().panel;
         const int w = int(std::lround(L.width * kPanelPxPerMm)), h = int(std::lround(L.height * kPanelPxPerMm));
-        setSize(w + 2 * kPad, kPad + 30 + 8 + h + 12 + 28 + 8 + 20 + kPad);
+        nativeW_ = w + 2 * kPad;
+        nativeH_ = kPad + 30 + 8 + h + 12 + 28 + 8 + 20 + kPad;
     } else {
-        setSize(kW, kPad + 30 + 8 + 52 + 12 + int(rows_.size()) * kRowH + 12 + 28 + 8 + 20 + kPad);
+        nativeW_ = kW;
+        nativeH_ = kPad + 30 + 8 + 52 + 12 + int(rows_.size()) * kRowH + 12 + 28 + 8 + 20 + kPad;
     }
+    const float scale = std::clamp(proc_.editorScale, 0.5f, 3.0f);
+    setResizeLimits(nativeW_ / 2, nativeH_ / 2, nativeW_ * 3, nativeH_ * 3);
+    if (auto* c = getConstrainer()) c->setFixedAspectRatio(double(nativeW_) / double(nativeH_));
+    setSize(int(std::lround(nativeW_ * scale)), int(std::lround(nativeH_ * scale)));
     resized();
 }
 
@@ -114,7 +142,16 @@ Editor::~Editor() { stopTimer(); }
 void Editor::paint(juce::Graphics& g) { g.fillAll(kBg); }
 
 void Editor::resized() {
-    auto b = getLocalBounds().reduced(kPad);
+    if (nativeW_ <= 0 || nativeH_ <= 0) return;
+    const float scale = float(getWidth()) / float(nativeW_);
+    proc_.editorScale = scale;
+    layoutNative();
+    for (auto* c : getChildren())
+        if (c != &tooltips_) c->setTransform(juce::AffineTransform::scale(scale));
+}
+
+void Editor::layoutNative() {
+    auto b = juce::Rectangle<int>(nativeW_, nativeH_).reduced(kPad);
     auto top = b.removeFromTop(30);
     if (panelView_) modeButton_.setBounds(top.removeFromRight(140).reduced(0, 2));
     title_.setBounds(top);
@@ -162,10 +199,11 @@ void Editor::timerCallback() {
         auto& row = *rows_[i];
         juce::String text;
         bool used = true;
-        if (have && i < r.param.size()) {
+        const juce::String id = i < info.params.size() ? juce::String(info.params[i].id) : juce::String("mix");
+        if (have && i < info.params.size() && i < r.param.size()) {
             text = r.param[i];
             used = !text.isEmpty();
-        } else if (auto* prm = proc_.params.getParameter(info.params[i].id)) {
+        } else if (auto* prm = proc_.params.getParameter(id)) {
             text = prm->getCurrentValueAsText();
         }
         row.readout.setText(used ? text : juce::String(juce::CharPointer_UTF8("\xe2\x80\x94")), juce::dontSendNotification);

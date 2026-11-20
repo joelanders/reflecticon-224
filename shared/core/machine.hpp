@@ -25,7 +25,15 @@ struct Param {
     float min = 0, max = 1, def = 0;
     std::vector<std::string> choices;   // Choice: the names (min = 0, max = size - 1)
     std::string unit;                   // Float/Int: shown after the value when no readout
+    std::string help;                   // the editor's tooltip: what the control does (describe())
 };
+
+// Tooltips by parameter id, after the table: describe(i.params, {{"decay", "..."}, ...}).
+inline void describe(std::vector<Param>& params, std::initializer_list<std::pair<const char*, const char*>> help) {
+    for (auto& [id, text] : help)
+        for (auto& p : params)
+            if (p.id == id) p.help = text;
+}
 
 struct Preset {
     std::string name;

@@ -228,6 +228,36 @@ kit::Info make_info() {
         {"hiss", "Input hiss", K::Bool, 0, 1, 1, {}, ""},
         {"unit", "Unit", K::Choice, 0, 1, 0, {"design values", "ravettel's unit"}, ""},
     };
+    kit::describe(i.params, {
+        {"inputLevel",
+         "Input level into the reverb. As on the hardware, it also sets the modulation rate."},
+        {"lfEq",
+         "Low-frequency decay."},
+        {"hfDecay",
+         "High-frequency decay: lower values darken the tail."},
+        {"directMix",
+         "The dry signal's level in the unit's own output mix."},
+        {"reverbMix",
+         "The reverb's level in the unit's own output mix."},
+        {"room",
+         "The room program: the PROMs' delay patterns."},
+        {"predelay",
+         "Delay before the reverb starts."},
+        {"decay",
+         "Reverb time."},
+        {"inputMute",
+         "Mutes the reverb's input: the tail rings out."},
+        {"dryOnly",
+         "Outputs the dry signal only."},
+        {"reverbClear",
+         "Clears the reverb memory, cutting the tail off."},
+        {"modulation",
+         "Slow delay modulation that smooths the tail's metallic ring."},
+        {"hiss",
+         "Adds the input stage's hiss, as on the hardware."},
+        {"unit",
+         "Values from the schematics, or the trims measured on one real unit."},
+    });
     // U71 modulation rate, U76/U77 gain modulation, U78 gains, U79 delay modulation, U69 delays;
     // binary images (tools/prom_bin.py in the StarGate project turns text dumps into these)
     i.roms = {
