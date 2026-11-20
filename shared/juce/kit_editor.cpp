@@ -5,7 +5,7 @@ namespace kit {
 namespace {
 const juce::Colour kBg{0xff1d1f22}, kPanel{0xff0b0b0b}, kLed{0xffff3b2f}, kText{0xffe6e6e6}, kDim{0xff7a7d82},
     kAccent{0xffd9a441};
-constexpr int kW = 560, kRowH = 30, kPad = 16, kNameW = 150, kReadW = 110;
+constexpr int kW = 560, kRowH = 30, kPad = 16, kNameW = 150, kReadW = 130;
 constexpr float kPanelPxPerMm = 2.4f;   // the hardware panel's scale (a 19" face is ~1160 px)
 }  // namespace
 
@@ -51,6 +51,14 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
             r->sa = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(proc_.params, prm.id, *r->slider);
         }
         addAndMakeVisible(r->control());
+        if (prm.tempo_sync) {
+            r->sync = std::make_unique<juce::ComboBox>();
+            r->sync->addItemList(Processor::syncChoices(), 1);
+            r->syncA = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(proc_.params, Processor::syncId(prm), *r->sync);
+            r->sync->setTooltip("Follow the host tempo: the time is this note value (T triplet, D dotted), within the "
+                                "control's range. Off: the control sets it.");
+            addAndMakeVisible(*r->sync);
+        }
         r->name.setTooltip(prm.help);
         if (auto* tc = dynamic_cast<juce::SettableTooltipClient*>(r->control())) tc->setTooltip(prm.help);
         rows_.push_back(std::move(r));
@@ -114,6 +122,7 @@ void Editor::setMode(bool hardware) {
         r->name.setVisible(!hardware);
         r->readout.setVisible(!hardware);
         r->control()->setVisible(!hardware);
+        if (r->sync) r->sync->setVisible(!hardware);
     }
     layoutSize();
 }
@@ -176,6 +185,7 @@ void Editor::layoutNative() {
         auto row = b.removeFromTop(kRowH);
         r->name.setBounds(row.removeFromLeft(kNameW));
         r->readout.setBounds(row.removeFromRight(kReadW));
+        if (r->sync) r->sync->setBounds(row.removeFromRight(76).reduced(2, 3));
         auto c = row.reduced(6, 3);
         if (r->toggle) c = c.withWidth(40);
         r->control()->setBounds(c);
@@ -207,9 +217,11 @@ void Editor::timerCallback() {
         } else if (auto* prm = proc_.params.getParameter(id)) {
             text = prm->getCurrentValueAsText();
         }
+        const int sc = row.sync ? proc_.syncChoice(i) : 0;
+        if (sc > 0 && used) text = Processor::syncChoices()[sc] + juce::String(juce::CharPointer_UTF8(" \xc2\xb7 ")) + text;
         row.readout.setText(used ? text : juce::String(juce::CharPointer_UTF8("\xe2\x80\x94")), juce::dontSendNotification);
         row.name.setAlpha(used ? 1.0f : 0.4f);
-        row.control()->setAlpha(used ? 1.0f : 0.4f);
+        row.control()->setAlpha(used && sc == 0 ? 1.0f : 0.4f);   // the tempo sets it
     }
     juce::String st = proc_.status();
     if (!r.status.empty()) st += "  |  " + juce::String(r.status);

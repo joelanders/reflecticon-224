@@ -26,6 +26,11 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout(const Info
             break;
         }
     }
+    // Sync menus for the times that may follow the host tempo
+    for (auto& p : info.params)
+        if (p.tempo_sync)
+            l.add(std::make_unique<AudioParameterChoice>(ParameterID{Processor::syncId(p), 1}, p.name + " sync",
+                                                         Processor::syncChoices(), 0));
     // The kit's own: wet/dry, after the machine (the hardware gives the effect only).
     l.add(std::make_unique<AudioParameterFloat>(
         ParameterID{"mix", 1}, "Mix", NormalisableRange<float>(0.0f, 100.0f), 100.0f,
@@ -40,7 +45,19 @@ Processor::Processor(const MachineType& type)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       params(*this, nullptr, "params", makeLayout(type.info)), type_(type) {
     std::vector<const std::atomic<float>*> raw;
-    for (auto& p : type_.info.params) raw.push_back(params.getRawParameterValue(p.id));
+    for (size_t i = 0; i < type_.info.params.size(); i++) {
+        auto& p = type_.info.params[i];
+        raw.push_back(params.getRawParameterValue(p.id));
+        if (p.tempo_sync) {   // the machine reads the synced value, which is the control's when off
+            auto s = std::make_unique<Synced>();
+            s->index = i;
+            s->knob = raw.back();
+            s->choice = params.getRawParameterValue(syncId(p));
+            s->value = s->knob->load();
+            raw.back() = &s->value;
+            synced_.push_back(std::move(s));
+        }
+    }
     host_ = std::make_unique<Host>(type_, raw);
     mix_ = params.getRawParameterValue("mix");
     // a new instance opens the easy editor; KIT_EDITOR=hardware opens the panel (tests, pluginval)
@@ -135,7 +152,40 @@ void Processor::boot(const std::string& state) {
     status_ = juce::String(roms_.describe(type_.info.roms));
 }
 
+const juce::StringArray& Processor::syncChoices() {
+    static const juce::StringArray c{"Off",  "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D",
+                                     "1/4T", "1/4",  "1/4D",  "1/2T", "1/2",   "1/2D", "1/1"};
+    return c;
+}
+
+double Processor::syncBeats(int choice) {
+    static const double b[] = {0,         0.125, 0.25 * 2 / 3, 0.25, 0.375, 0.5 * 2 / 3, 0.5, 0.75,
+                               2.0 / 3.0, 1.0,   1.5,          4.0 / 3.0, 2.0, 3.0, 4.0};
+    return choice > 0 && choice < int(std::size(b)) ? b[choice] : 0.0;
+}
+
+int Processor::syncChoice(size_t i) const {
+    for (auto& s : synced_)
+        if (s->index == i) return int(std::lround(s->choice->load()));
+    return 0;
+}
+
+void Processor::updateSynced() {
+    const double bpm = bpm_.load();
+    for (auto& s : synced_) {
+        const auto& p = type_.info.params[s->index];
+        const double beats = syncBeats(int(std::lround(s->choice->load())));
+        float v = s->knob->load();
+        if (beats > 0 && bpm > 0) {
+            v = float(std::clamp(60000.0 / bpm * beats, double(p.min), double(p.max)));
+            if (p.kind == Param::Int) v = std::round(v);
+        }
+        s->value.store(v);
+    }
+}
+
 void Processor::timerCallback() {
+    updateSynced();
     int l = int(host_->latency());
     if (l != getLatencySamples()) setLatencySamples(l);
     adoptPanelSettings();
@@ -152,6 +202,17 @@ void Processor::adoptPanelSettings() {
             if (std::isnan(ps.adopt[i])) continue;
             auto* prm = dynamic_cast<juce::RangedAudioParameter*>(params.getParameter(type_.info.params[i].id));
             if (!prm) continue;
+            if (syncChoice(i) > 0) {   // following the tempo: a new time set on the panel turns that off
+                float now = 0;
+                for (auto& s : synced_)
+                    if (s->index == i) now = s->value.load();
+                if (std::abs(ps.adopt[i] - now) < 0.5f) continue;
+                if (auto* sp = params.getParameter(syncId(type_.info.params[i]))) {
+                    sp->beginChangeGesture();
+                    sp->setValueNotifyingHost(0.0f);
+                    sp->endChangeGesture();
+                }
+            }
             const float v = prm->convertTo0to1(prm->getNormalisableRange().snapToLegalValue(ps.adopt[i]));
             if (std::abs(v - prm->getValue()) < 1e-6f) continue;
             prm->beginChangeGesture();
@@ -195,6 +256,12 @@ void Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&
     if (maxBlock_ <= 0 || scratch_.getNumSamples() < maxBlock_) {   // not prepared
         buffer.clear();
         return;
+    }
+    if (!synced_.empty()) {   // times that follow the tempo
+        if (auto* ph = getPlayHead())
+            if (auto pos = ph->getPosition())
+                if (auto bpm = pos->getBpm(); bpm && *bpm > 1.0) bpm_.store(*bpm);
+        updateSynced();
     }
     // in chunks of the prepared block (a host may exceed it); the inputs are copied or mixed into
     // scratch_ first, since the outputs overwrite the buffer in place
@@ -242,6 +309,7 @@ void Processor::getStateInformation(juce::MemoryBlock& destData) {
     juce::ValueTree t(juce::Identifier(type_.info.state_tag));
     t.setProperty("version", 1, nullptr);
     t.setProperty("editorScale", editorScale, nullptr);
+    if (bpm_.load() > 0) t.setProperty("bpm", bpm_.load(), nullptr);   // synced times are right at load
     t.setProperty("roms", romPaths_.joinIntoString("\n"), nullptr);
     if (hasPanel()) {
         t.setProperty("editor", hardware_ ? "hardware" : "easy", nullptr);
@@ -260,6 +328,7 @@ void Processor::setStateInformation(const void* data, int sizeInBytes) {
     auto t = juce::ValueTree::readFromData(data, size_t(sizeInBytes));
     if (!t.hasType(juce::Identifier(type_.info.state_tag))) return;
     if (auto p = t.getChildWithName(params.state.getType()); p.isValid()) params.replaceState(p);
+    if (t.hasProperty("bpm") && bpm_.load() <= 0) bpm_.store(double(t.getProperty("bpm")));
     if (t.hasProperty("editorScale")) editorScale = std::clamp(float(t.getProperty("editorScale")), 0.5f, 3.0f);
     if (hasPanel()) {
         hardware_ = t.getProperty("editor").toString() == "hardware";
@@ -281,6 +350,7 @@ void Processor::setStateInformation(const void* data, int sizeInBytes) {
         romPaths_ = paths;
     }
     if (!ms.empty() || !host_->has_machine()) boot(ms);
+    updateSynced();
     host_->sync();   // the session's parameters before the next block (offline renders)
 }
 

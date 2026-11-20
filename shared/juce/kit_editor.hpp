@@ -38,6 +38,8 @@ private:
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sa;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> ca;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ba;
+        std::unique_ptr<juce::ComboBox> sync;   // Param::tempo_sync: off or a note value
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncA;
         juce::Component* control() const {
             return slider ? (juce::Component*)slider.get() : combo ? (juce::Component*)combo.get() : toggle.get();
         }

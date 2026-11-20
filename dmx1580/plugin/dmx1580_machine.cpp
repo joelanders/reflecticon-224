@@ -255,6 +255,7 @@ kit::Info make_info() {
         {"analog", "Analog stages", K::Bool, 0, 1, 0, {}, ""},
         {"smooth", "Smooth pitch (later units)", K::Bool, 0, 1, 0, {}, ""},
     };
+    kit::tempo_sync(i.params, {"delayA", "delayB"});
     kit::describe(i.params, {
         {"delayA",
          "Channel A's delay time, typed into the unit's keypad. The longest delay depends on RAM per channel."},

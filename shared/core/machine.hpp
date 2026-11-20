@@ -26,7 +26,15 @@ struct Param {
     std::vector<std::string> choices;   // Choice: the names (min = 0, max = size - 1)
     std::string unit;                   // Float/Int: shown after the value when no readout
     std::string help;                   // the editor's tooltip: what the control does (describe())
+    bool tempo_sync = false;            // a time in ms the plugin can set from the host tempo (tempo_sync())
 };
+
+// Times in ms that may follow the host tempo: each gets a Sync menu (off or a note value).
+inline void tempo_sync(std::vector<Param>& params, std::initializer_list<const char*> ids) {
+    for (auto* id : ids)
+        for (auto& p : params)
+            if (p.id == id) p.tempo_sync = true;
+}
 
 // Tooltips by parameter id, after the table: describe(i.params, {{"decay", "..."}, ...}).
 inline void describe(std::vector<Param>& params, std::initializer_list<std::pair<const char*, const char*>> help) {

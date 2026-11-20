@@ -2,11 +2,21 @@
 // machine, offscreen, then a saved-state round trip into a fresh instance (ROMs from $<rom_env> or
 // the remembered paths). Not shipped. Values are plain (e.g. decay=20). `hardware` shows the
 // hardware panel; `press=` presses panel keys (decimal or 0x ids) in turn, 150 ms each, 250 ms
-// apart, with audio running, then lets 1.5 s pass and adopts what the panel set.
+// apart, with audio running, then lets 1.5 s pass and adopts what the panel set. `wait=3` plays 3 s more first; `bpm=120` plays as
+// a host at that tempo (for the Sync menus, e.g. delayASync=6).
 #include "kit_processor.hpp"
 #include <juce_audio_utils/juce_audio_utils.h>
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter();
+
+struct FixedTempo : juce::AudioPlayHead {
+    double bpm = 0;
+    juce::Optional<PositionInfo> getPosition() const override {
+        PositionInfo p;
+        if (bpm > 0) p.setBpm(bpm);
+        return p;
+    }
+};
 
 int main(int argc, char** argv) {
     juce::ScopedJuceInitialiser_GUI gui;
@@ -14,10 +24,21 @@ int main(int argc, char** argv) {
     proc->setPlayConfigDetails(2, 2, 48000, 512);
     proc->prepareToPlay(48000, 512);
     juce::StringArray presses;
+    FixedTempo tempo;
+    double wait = 0;   // `wait=3`: seconds more of audio before the snapshot
+    proc->setPlayHead(&tempo);
     for (int i = 2; i < argc; i++) {
         juce::String a(argv[i]);
         if (a == "hardware") {
             proc->setHardwareMode(true);
+            continue;
+        }
+        if (a.startsWith("wait=")) {
+            wait = a.fromFirstOccurrenceOf("=", false, false).getDoubleValue();
+            continue;
+        }
+        if (a.startsWith("bpm=")) {
+            tempo.bpm = a.fromFirstOccurrenceOf("=", false, false).getDoubleValue();
             continue;
         }
         if (a.startsWith("press=")) {
@@ -27,6 +48,7 @@ int main(int argc, char** argv) {
         if (auto* p = proc->params.getParameter(a.upToFirstOccurrenceOf("=", false, false)))
             p->setValueNotifyingHost(p->convertTo0to1(a.fromFirstOccurrenceOf("=", false, false).getFloatValue()));
     }
+    proc->updateSynced();
     proc->host().sync();
     juce::AudioBuffer<float> buf(2, 512);
     juce::MidiBuffer midi;
@@ -53,6 +75,7 @@ int main(int argc, char** argv) {
         proc->host().sync();
         run(0.5);
     }
+    run(wait);
     proc->host().refresh_panel();
     proc->host().refresh_readouts();
     std::unique_ptr<juce::AudioProcessorEditor> ed(proc->createEditor());
@@ -69,6 +92,10 @@ int main(int argc, char** argv) {
     auto before = proc->host().readouts();
     std::printf("%s, latency %d, status: %s\n  panel [%s]\n", out.getFullPathName().toRawUTF8(), proc->getLatencySamples(),
                 proc->status().toRawUTF8(), before.panel.c_str());
+    std::printf("  machine status [%s] readouts:", before.status.c_str());
+    for (size_t i = 0; i < before.param.size() && i < proc->info().params.size(); i++)
+        if (!before.param[i].empty()) std::printf(" %s=[%s]", proc->info().params[i].id.c_str(), before.param[i].c_str());
+    std::printf("\n");
     if (proc->hasPanel()) {
         auto ps = proc->host().panel();
         std::printf("  hardware panel: valid %d, alpha [%s], LEDs lit:", int(ps.valid), ps.alpha.c_str());
@@ -90,6 +117,10 @@ int main(int argc, char** argv) {
     auto after = p2->host().readouts();
     bool same = before.panel == after.panel && before.param == after.param;
     std::printf("state %d bytes; restored panel [%s]: %s\n", int(st.getSize()), after.panel.c_str(), same ? "same" : "DIFFERENT");
+    if (!same)
+        for (size_t i = 0; i < before.param.size() && i < after.param.size(); i++)
+            if (before.param[i] != after.param[i])
+                std::printf("  %s: [%s] -> [%s]\n", proc->info().params[i].id.c_str(), before.param[i].c_str(), after.param[i].c_str());
     p2.reset();
     proc.reset();
     return same ? 0 : 1;

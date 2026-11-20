@@ -232,6 +232,7 @@ kit::Info make_info() {
         {"hf", "Decay HF", K::Int, -9, 0, -4, {}, ""},
         {"swap", "Swap outputs", K::Bool, 0, 1, 0, {}, ""},
     };
+    kit::tempo_sync(i.params, {"predelay"});
     kit::describe(i.params, {
         {"program",
          "The reverb program, run by the unit's own firmware."},

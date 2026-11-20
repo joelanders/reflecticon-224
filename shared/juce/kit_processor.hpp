@@ -57,6 +57,16 @@ public:
     // Called by the timer; public for tools that run without a message loop.
     void adoptPanelSettings();
 
+    // ---- tempo sync (Param::tempo_sync) ----
+    // The note values of a Sync menu, index 0 = off; and their length in quarter notes.
+    static const juce::StringArray& syncChoices();
+    static double syncBeats(int choice);
+    static juce::String syncId(const Param& p) { return juce::String(p.id) + "Sync"; }
+    // The note value parameter i follows, or 0 when it follows its own control.
+    int syncChoice(size_t i) const;
+    // Work out the values the machine gets (any thread); the host's next poll applies them.
+    void updateSynced();
+
 private:
     void timerCallback() override;
     bool readRoms(const juce::StringArray& paths, RomSet& out);
@@ -79,6 +89,14 @@ private:
     int maxBlock_ = 0;
     bool hardware_ = false;
     uint32_t adoptedSerial_ = 0;
+    struct Synced {   // a time the host tempo may set: what the machine gets instead of the control
+        size_t index = 0;
+        const std::atomic<float>* knob = nullptr;
+        const std::atomic<float>* choice = nullptr;
+        std::atomic<float> value{0.0f};
+    };
+    std::vector<std::unique_ptr<Synced>> synced_;
+    std::atomic<double> bpm_{0.0};   // the host's tempo, 0 until a block has told us
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Processor)
 };
