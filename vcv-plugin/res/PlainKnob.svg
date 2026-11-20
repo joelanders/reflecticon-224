@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The knob's pointer: a cream line from near the centre to the face's edge,
+     8 mm square so it turns about the face's centre. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="8mm" height="8mm" viewBox="0 0 8 8">
+  <line x1="4" y1="3.0" x2="4" y2="1.0" stroke="#e8e2d4" stroke-width="0.6" stroke-linecap="round"/>
+</svg>

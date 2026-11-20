@@ -1,0 +1,18 @@
+{
+  "slug": "Reflexion224",
+  "name": "Reflexion 224",
+  "version": "2.0.0",
+  "license": "AGPL-3.0-or-later",
+  "brand": "Reflexion",
+  "author": "Joe Landers",
+  "pluginUrl": "https://github.com/joelanders/reflecticon-224",
+  "sourceUrl": "https://github.com/joelanders/reflecticon-224",
+  "modules": [
+    {
+      "slug": "Reflexion224",
+      "name": "Reflexion 224",
+      "description": "The Lexicon 224 / 224X / 224XL running its own firmware (bring your own ROMs). Prototype.",
+      "tags": ["Reverb", "Effect", "Stereo"]
+    }
+  ]
+}

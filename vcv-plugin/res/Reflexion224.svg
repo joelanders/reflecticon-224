@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Prototype panel, 20 HP. No text: Rack's renderer ignores <text>, so the
+     labels and the display are drawn by the module (src/Reflexion224.cpp). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="101.6mm" height="128.5mm" viewBox="0 0 101.6 128.5">
+  <rect width="101.6" height="128.5" fill="#d9d2c3"/>
+  <rect x="4" y="6.5" width="93.6" height="15" rx="1.5" fill="#1a0f0c"/>
+  <rect x="4" y="25" width="93.6" height="74" rx="1.5" fill="#cbc3b2"/>
+  <rect x="6" y="27.45" width="89.6" height="7" rx="1" fill="#1a0f0c"/>
+  <!-- The LARC's scale: ten lines in each gap between the fader slots, over
+       the caps' travel (centre 39.2-83.4 mm; the faders are 14 + 14.72 i, y 61.3). -->
+  <g fill="#2a2620">
+    <rect x="15.40" y="39.05" width="11.92" height="0.3"/>
+    <rect x="15.40" y="43.96" width="11.92" height="0.3"/>
+    <rect x="15.40" y="48.87" width="11.92" height="0.3"/>
+    <rect x="15.40" y="53.78" width="11.92" height="0.3"/>
+    <rect x="15.40" y="58.69" width="11.92" height="0.3"/>
+    <rect x="15.40" y="63.61" width="11.92" height="0.3"/>
+    <rect x="15.40" y="68.52" width="11.92" height="0.3"/>
+    <rect x="15.40" y="73.43" width="11.92" height="0.3"/>
+    <rect x="15.40" y="78.34" width="11.92" height="0.3"/>
+    <rect x="15.40" y="83.25" width="11.92" height="0.3"/>
+    <rect x="30.12" y="39.05" width="11.92" height="0.3"/>
+    <rect x="30.12" y="43.96" width="11.92" height="0.3"/>
+    <rect x="30.12" y="48.87" width="11.92" height="0.3"/>
+    <rect x="30.12" y="53.78" width="11.92" height="0.3"/>
+    <rect x="30.12" y="58.69" width="11.92" height="0.3"/>
+    <rect x="30.12" y="63.61" width="11.92" height="0.3"/>
+    <rect x="30.12" y="68.52" width="11.92" height="0.3"/>
+    <rect x="30.12" y="73.43" width="11.92" height="0.3"/>
+    <rect x="30.12" y="78.34" width="11.92" height="0.3"/>
+    <rect x="30.12" y="83.25" width="11.92" height="0.3"/>
+    <rect x="44.84" y="39.05" width="11.92" height="0.3"/>
+    <rect x="44.84" y="43.96" width="11.92" height="0.3"/>
+    <rect x="44.84" y="48.87" width="11.92" height="0.3"/>
+    <rect x="44.84" y="53.78" width="11.92" height="0.3"/>
+    <rect x="44.84" y="58.69" width="11.92" height="0.3"/>
+    <rect x="44.84" y="63.61" width="11.92" height="0.3"/>
+    <rect x="44.84" y="68.52" width="11.92" height="0.3"/>
+    <rect x="44.84" y="73.43" width="11.92" height="0.3"/>
+    <rect x="44.84" y="78.34" width="11.92" height="0.3"/>
+    <rect x="44.84" y="83.25" width="11.92" height="0.3"/>
+    <rect x="59.56" y="39.05" width="11.92" height="0.3"/>
+    <rect x="59.56" y="43.96" width="11.92" height="0.3"/>
+    <rect x="59.56" y="48.87" width="11.92" height="0.3"/>
+    <rect x="59.56" y="53.78" width="11.92" height="0.3"/>
+    <rect x="59.56" y="58.69" width="11.92" height="0.3"/>
+    <rect x="59.56" y="63.61" width="11.92" height="0.3"/>
+    <rect x="59.56" y="68.52" width="11.92" height="0.3"/>
+    <rect x="59.56" y="73.43" width="11.92" height="0.3"/>
+    <rect x="59.56" y="78.34" width="11.92" height="0.3"/>
+    <rect x="59.56" y="83.25" width="11.92" height="0.3"/>
+    <rect x="74.28" y="39.05" width="11.92" height="0.3"/>
+    <rect x="74.28" y="43.96" width="11.92" height="0.3"/>
+    <rect x="74.28" y="48.87" width="11.92" height="0.3"/>
+    <rect x="74.28" y="53.78" width="11.92" height="0.3"/>
+    <rect x="74.28" y="58.69" width="11.92" height="0.3"/>
+    <rect x="74.28" y="63.61" width="11.92" height="0.3"/>
+    <rect x="74.28" y="68.52" width="11.92" height="0.3"/>
+    <rect x="74.28" y="73.43" width="11.92" height="0.3"/>
+    <rect x="74.28" y="78.34" width="11.92" height="0.3"/>
+    <rect x="74.28" y="83.25" width="11.92" height="0.3"/>
+  </g>
+  <!-- Vertically the well holds the name strip, the slot (48.8 visible), the
+       value windows with 2.45 mm above, between and below each. -->
+  <!-- The value windows: centred on the faders (14 + 14.72 i), 13.2 wide. -->
+  <rect x="7.4" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <rect x="22.12" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <rect x="36.84" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <rect x="51.56" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <rect x="66.28" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <rect x="81" y="88.15" width="13.2" height="8.4" rx="0.6" fill="#1a0f0c"/>
+  <!-- The jacks and knobs on the faders' columns, their wells lined up with
+       the value windows above: IN L, IN R, LEVEL | MIX | OUT L, OUT R. -->
+  <rect x="7.4" y="102.5" width="42.64" height="19.5" rx="1.5" fill="#cbc3b2"/>
+  <rect x="51.56" y="102.5" width="13.2" height="19.5" rx="1.5" fill="#cbc3b2"/>
+  <rect x="66.28" y="102.5" width="27.92" height="19.5" rx="1.5" fill="#2b2b2b"/>
+</svg>

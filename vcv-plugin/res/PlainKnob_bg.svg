@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The knob's fixed face, 8 mm, in the fader caps' style: a dark outline, a
+     narrow rim lit from above (upper half light, lower half mid), a flat
+     black face. The pointer (PlainKnob.svg) turns over it. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="8mm" height="8mm" viewBox="0 0 8 8">
+  <circle cx="4" cy="4" r="4" fill="#0b0a09"/>
+  <circle cx="4" cy="4" r="3.88" fill="#36332f"/>
+  <path d="M 0.12 4 A 3.88 3.88 0 0 1 7.88 4 Z" fill="#5c5853"/>
+  <circle cx="4" cy="4" r="3.45" fill="#1f1d1b"/>
+</svg>

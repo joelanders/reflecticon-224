@@ -1,0 +1,147 @@
+# The VCV Rack module (vcv-plugin/) for macOS arm64 and x64, Windows x64 and
+# Linux x64, each against the official Rack SDK 2.6.6 (checksums pinned). No
+# ROMs here, so nothing runs the machine: each job builds, lists what the
+# binary links against, and keeps the .vcvplugin as a workflow artifact.
+name: VCV plugin
+
+on:
+  pull_request:
+    paths:
+      - "vcv-plugin/**"
+      - "juce-plugin/source/**"
+      - "juce-plugin/plugin/**"
+      - "analog/**"
+      - ".github/workflows/vcv.yml"
+  workflow_dispatch:
+
+env:
+  RACK_SDK_VERSION: "2.6.6"
+
+jobs:
+  macos:
+    name: macos ${{ matrix.arch }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            sdk_sha256: 29414e52417992cbafa47e30f947c3c0c7a34e5c424bb83c5a0af8c24840481f
+            cross: ""
+          - arch: x64
+            sdk_sha256: 9b8b0d7582ca25fac879f8f64de40f2481df2fd903b65f3abb5d6801689060ec
+            cross: x86_64-apple-darwin
+    defaults:
+      run:
+        working-directory: vcv-plugin
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tools
+        run: |
+          command -v jq >/dev/null || brew install jq
+          command -v zstd >/dev/null || brew install zstd
+
+      - name: Rack SDK
+        run: |
+          sdk="Rack-SDK-$RACK_SDK_VERSION-mac-${{ matrix.arch }}.zip"
+          curl -fsSL -o "$sdk" "https://vcvrack.com/downloads/$sdk"
+          echo "${{ matrix.sdk_sha256 }}  $sdk" | shasum -a 256 -c
+          unzip -q "$sdk"
+
+      - name: Build
+        run: |
+          if [ -n "${{ matrix.cross }}" ]; then cross="CROSS_COMPILE=${{ matrix.cross }}"; else cross=; fi
+          make -j "$(sysctl -n hw.ncpu)" $cross dist
+          ls -la dist
+          otool -L plugin.dylib
+          lipo -info plugin.dylib
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Reflexion224-vcv-mac-${{ matrix.arch }}
+          path: vcv-plugin/dist/*.vcvplugin
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+        working-directory: vcv-plugin
+    steps:
+      - uses: actions/checkout@v5
+
+      # MSYS2 has no jq package now; the runner image's own jq (on the
+      # Windows PATH, which the shell inherits after MSYS2's) serves.
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          path-type: inherit
+          install: >-
+            make zip unzip zstd tar
+            mingw-w64-x86_64-gcc
+
+      - name: Rack SDK
+        run: |
+          sdk="Rack-SDK-$RACK_SDK_VERSION-win-x64.zip"
+          curl -fsSL -o "$sdk" "https://vcvrack.com/downloads/$sdk"
+          echo "12f2043311db98592bdf73a7797e8a957c47950c3c8c17c7ff6421eb0015a05c  $sdk" | sha256sum -c
+          unzip -q "$sdk"
+
+      - name: Build
+        run: |
+          gcc --version | head -1
+          which gcc make jq zstd
+          make -j "$(nproc)" dist
+          ls -la dist
+          # Rack loads plugin.dll from the plugin's folder: every DLL it needs
+          # must be Windows' own or Rack's (libRack.dll); MinGW's runtime is
+          # linked in (the Makefile), so anything else fails the job.
+          objdump -p plugin.dll | grep "DLL Name" | tee dlls.txt
+          if grep -viE "DLL Name: (KERNEL32|msvcrt|libRack|USER32|ADVAPI32|SHELL32|WS2_32|api-ms-win-[a-z0-9-]+)\.dll" dlls.txt; then
+            echo "plugin.dll needs a DLL that is neither Windows' nor Rack's" >&2
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Reflexion224-vcv-win-x64
+          path: vcv-plugin/dist/*.vcvplugin
+
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: vcv-plugin
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends jq zstd unzip
+
+      - name: Rack SDK
+        run: |
+          sdk="Rack-SDK-$RACK_SDK_VERSION-lin-x64.zip"
+          curl -fsSL -o "$sdk" "https://vcvrack.com/downloads/$sdk"
+          echo "420da2452def7b195f98e3a0650c35f1e0f058a98a71840b4347d3d203618532  $sdk" | sha256sum -c
+          unzip -q "$sdk"
+
+      - name: Build
+        run: |
+          g++ --version | head -1
+          make -j "$(nproc)" dist
+          ls -la dist
+          ldd plugin.so || true
+          # The newest glibc symbol version it needs (Ubuntu 22.04 has 2.35).
+          objdump -T plugin.so | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Reflexion224-vcv-lin-x64
+          path: vcv-plugin/dist/*.vcvplugin

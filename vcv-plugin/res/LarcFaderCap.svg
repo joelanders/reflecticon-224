@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The fader cap: wide and shallow after the LARC drawing (224X owner's
+     manual v8.2, PDF p. 13), a little taller to grab (10 x 4.6 mm), rounded
+     corners, no index line. Black, as on the remote before the LARC, rather
+     than the LARC's light grey. A flat top inside a narrow chamfer lit from
+     above: the top bevel light, the sides mid, the bottom dark. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="4.6mm" viewBox="0 0 10 4.6">
+  <rect x="0" y="0" width="10" height="4.6" rx="1.1" fill="#0b0a09"/>
+  <rect x="0.12" y="0.12" width="9.76" height="4.36" rx="1.0" fill="#36332f"/>
+  <path d="M 0.413 0.413 A 1.0 1.0 0 0 1 1.120 0.120 L 8.880 0.120 A 1.0 1.0 0 0 1 9.587 0.413 L 9.333 0.667 A 0.4 0.4 0 0 0 9.050 0.550 L 0.950 0.550 A 0.4 0.4 0 0 0 0.667 0.667 Z" fill="#5c5853"/>
+  <path d="M 0.413 4.187 A 1.0 1.0 0 0 0 1.120 4.480 L 8.880 4.480 A 1.0 1.0 0 0 0 9.587 4.187 L 9.333 3.933 A 0.4 0.4 0 0 1 9.050 4.050 L 0.950 4.050 A 0.4 0.4 0 0 1 0.667 3.933 Z" fill="#131210"/>
+  <rect x="0.55" y="0.55" width="8.9" height="3.5" rx="0.4" fill="#1f1d1b"/>
+</svg>
