@@ -30,7 +30,7 @@ set(PLUGIN_TARGET Reflecticon224)
 # users keep their ROMs. scripts/run_gates.sh checks rom_library.h agrees.
 set(PLUGIN_SUPPORT_FOLDER "Reflexion224")
 
-project(${PLUGIN_TARGET} VERSION 0.1.2 LANGUAGES C CXX)
+project(${PLUGIN_TARGET} VERSION 0.2.0 LANGUAGES C CXX)
 if(APPLE)
     enable_language(OBJC OBJCXX)
 endif()
