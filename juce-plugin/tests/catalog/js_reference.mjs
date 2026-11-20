@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // The web demo's answers, for the C++ catalog tests (catalog_test.cpp) to
 // compare against. It runs the page's OWN code: helpFor, tableText and
-// tableRaw are cut out of page/app.js by their source lines, and share links
-// come from web/share.js itself. Only the catalog bookkeeping (keys, labels,
+// tableRaw are page/params.js's exports, and share links come from
+// page/share.js itself. Only the catalog bookkeeping (keys, labels,
 // named-slider order) is restated here, as app.js writes it.
 //
 //   node tests/catalog/js_reference.mjs OUT.json
@@ -15,23 +15,17 @@ const web = join(here, '..', '..', '..', 'web-demo', 'page');
 const out = process.argv[2];
 if (!out) { console.error('usage: node js_reference.mjs OUT.json'); process.exit(2); }
 
-// --- the page's functions, from app.js ---------------------------------
-const app = readFileSync(join(web, 'app.js'), 'utf8');
-function cut(from, to) {
-  const a = app.indexOf(from), b = app.indexOf(to, a + 1);
-  if (a < 0 || b < 0) throw new Error(`app.js: cannot find ${from} .. ${to}`);
-  return app.slice(a, b);
-}
-const helpSource = cut('const SUFFIX =', 'function drawPages(');
-const tableSource = cut('function tableText(', '// What each parameter does');
+// --- the page's functions, from params.js ------------------------------
+// (They lived in app.js until the sliders moved to params.js, which exports
+// them: imported, not cut out by source lines.)
+const params = await import(join(web, 'params.js'));
 const paramHelp = JSON.parse(readFileSync(join(web, 'param_help.json'), 'utf8'));
 let op = { kind: 'larc' };
-const page = new Function('paramHelp', 'getOp', `
-  const op = new Proxy({}, { get: (_, k) => getOp()[k] });
-  const range = () => op.kind === 'panel' ? [0, 253] : [2, 254];
-  ${tableSource}
-  ${helpSource}
-  return { helpFor, tableText, tableRaw };`)(paramHelp, () => op);
+const page = {
+  helpFor: (name, heading) => params.helpFor(paramHelp, name, heading),
+  tableText: params.tableText,
+  tableRaw: (table, text) => params.tableRaw(table, text, params.sliderRange(op)[1]),
+};
 
 // --- share.js, as the page imports it ----------------------------------
 globalThis.location = { origin: 'https://example.invalid', pathname: '/index.html' };

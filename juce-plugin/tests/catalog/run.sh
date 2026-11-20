@@ -12,4 +12,4 @@ c++ -std=c++20 -O1 -Wall -Wextra -o "$out/catalog_test" \
     "$here/catalog_test.cpp" "$root/source/catalog/json.cpp" "$root/source/catalog/catalog.cpp" \
     "$root/source/catalog/help.cpp" "$root/source/catalog/share.cpp"
 "$out/catalog_test" "$web" "$out/js_reference.json"
-python3 "$page/check_param_help.py"
+python3 "$web/check_param_help.py"
