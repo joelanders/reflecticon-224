@@ -1,6 +1,6 @@
 // The host's rate on one side, a machine's own rate on the other, every buffer allocated in
 // setup(). Generalised from dn780/emu/core/rate_bridge.hpp and dmx15-80/emu/core/rate_bridge.hpp
-// (both from reflecticon-224, same author, AGPLv3):
+// (both from the 224 in 224/juce-plugin, same author, AGPLv3):
 // - the internal rate is a rational number: `internal` rate units, `unit` units per hertz
 //   (the DN780's 15 MHz / 512 = 29,296.875 Hz is 234375 with unit 8);
 // - one or two input channels, two outputs;

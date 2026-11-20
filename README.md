@@ -4,7 +4,7 @@ Emulations of early digital delay and reverb units that run each machine's own f
 PROMs) on models built from the schematics, in your browser or as a plugin. You supply the ROMs:
 nothing in this repository or its builds holds ROM bytes.
 
-The 224's web demo: https://joelanders.github.io/reflecticon-224/
+The 224's web demo: https://joelanders.github.io/reflecticon/
 
 ## Machines
 
@@ -38,7 +38,7 @@ still `Application Support/Reflexion224`. Only the 224 has been released.
 ## Layout
 
 ```
-224/            the 224: everything it had as the reflecticon-224 repo (its own plugin and web demo)
+224/            the 224: everything this repository held when it was reflecticon-224 (its own plugin and web demo)
 rmx16/  dmx1580/  dn780/  sg323/
   core/         the emulator
   plugin/       the plugin's machine definition and front panel

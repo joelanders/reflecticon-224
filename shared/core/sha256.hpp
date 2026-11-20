@@ -1,5 +1,5 @@
 // SHA-256 (FIPS 180-4), small and self-contained, for recognising ROM chips by content. No JUCE.
-// Copied from reflecticon-224 (juce-plugin/source/roms/sha256.hpp, same author, AGPLv3), via dmx15-80.
+// Copied from 224/juce-plugin/source/roms/sha256.hpp (same author, AGPLv3), via dmx15-80.
 #pragma once
 #include <array>
 #include <cstddef>

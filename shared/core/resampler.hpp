@@ -1,5 +1,5 @@
 // A fixed-ratio polyphase windowed-sinc resampler for one channel: a machine's internal rate to
-// and from the host's. From reflecticon-224 (juce-plugin/source/resampler.hpp, same author,
+// and from the host's. From the 224 (224/juce-plugin/source/resampler.hpp, same author,
 // AGPLv3), via dmx15-80 and dn780: rational rates in any unit, an optional cutoff, taps per phase
 // as a template parameter. The ratio is rational
 // (out/in = up/down in lowest terms), so the phases repeat exactly and the

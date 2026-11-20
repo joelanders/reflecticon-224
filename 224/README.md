@@ -15,7 +15,7 @@ designing and building the machine that runs the algorithms. 1975-1978 predates 
 programmable DSP out of a few boards of 7400 series TTL logic chips. An 8080 host computer writes ~100 32-bit instructions to a shared
 Writable Control Store, and these run in a straight line once per audio frame. Throughput is one Delay Memory access and one MAC per microinstruction.
 
-The web demo, at https://joelanders.github.io/reflecticon-224/:
+The web demo, at https://joelanders.github.io/reflecticon/:
 
 <img width="750" alt="The web page" src="https://github.com/user-attachments/assets/c0db1bfa-9a64-4a50-8ab3-c72e130a686f" />
 
