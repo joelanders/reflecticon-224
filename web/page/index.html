@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gear Machines</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <nav id="machines" aria-label="Machines"></nav>
+</header>
+<main>
+  <section class="head">
+    <h1 id="name">Gear machines</h1>
+    <p id="about" class="dim"></p>
+  </section>
+
+  <section class="card" id="romCard">
+    <div class="row between">
+      <h2>ROMs</h2>
+      <div class="row gap">
+        <label class="btn">Add files…<input id="romFiles" type="file" multiple hidden></label>
+        <button id="romForget" class="btn quiet">Forget</button>
+      </div>
+    </div>
+    <ul id="romSlots" class="slots"></ul>
+    <p class="dim small" id="romNote">Bring your own: drop the image files anywhere on the page. They stay in this
+      browser and are never uploaded.</p>
+  </section>
+
+  <section class="card">
+    <div class="row between wrap gap">
+      <button id="power" class="btn big" disabled>Start audio</button>
+      <div class="row gap wrap">
+        <label class="field">Source
+          <select id="source">
+            <option value="drums">Drum loop</option>
+            <option value="pluck">Plucked notes</option>
+            <option value="clicks">Clicks (every 2 s)</option>
+            <option value="noise">Noise bursts</option>
+            <option value="file">Audio file…</option>
+            <option value="mic">Microphone / line in</option>
+            <option value="none">Nothing</option>
+          </select>
+        </label>
+        <input id="audioFile" type="file" accept="audio/*" hidden>
+      </div>
+    </div>
+    <div class="mix">
+      <label>Dry <input id="dry" type="range" min="0" max="1" step="0.01" value="0"><output id="dryOut"></output></label>
+      <label>Wet <input id="wet" type="range" min="0" max="1" step="0.01" value="1"><output id="wetOut"></output></label>
+      <label>Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.7"><output id="volOut"></output></label>
+    </div>
+    <div class="meterRow"><span class="dim small">Out</span><div id="meter" class="meter"></div><output id="meterOut" class="small"></output></div>
+    <p id="audioStatus" class="dim small"></p>
+  </section>
+
+  <section class="hw" id="hwCard" hidden>
+    <div id="hw"></div>
+    <p id="hwNote" class="dim small"></p>
+  </section>
+
+  <section class="display" id="textDisplay" aria-live="polite">
+    <div id="panel">&nbsp;</div>
+    <div id="mstatus" class="small"></div>
+  </section>
+
+  <section class="card">
+    <div class="row between wrap gap">
+      <h2>Controls</h2>
+      <div class="row gap">
+        <button id="modeBtn" class="btn" hidden>Hardware panel</button>
+        <select id="presets" hidden><option value="">Presets…</option></select>
+        <button id="reset" class="btn quiet">Defaults</button>
+      </div>
+    </div>
+    <div id="params" class="params"></div>
+  </section>
+</main>
+<footer class="dim small">Emulations from schematics and firmware. Not affiliated with or endorsed by the makers.</footer>
+<script type="module" src="app.mjs"></script>
+</body>
+</html>
