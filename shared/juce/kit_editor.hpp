@@ -43,7 +43,7 @@ private:
     };
 
     Processor& proc_;
-    juce::Label title_, about_, panel_, status_;
+    juce::Label title_, panel_, status_;
     juce::ComboBox presets_;
     juce::TextButton romsButton_{"Choose ROMs..."};
     juce::TextButton modeButton_;

@@ -23,11 +23,6 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
     title_.setFont(juce::FontOptions(22.0f, juce::Font::bold));
     title_.setColour(juce::Label::textColourId, kText);
     addAndMakeVisible(title_);
-    about_.setText(info.about, juce::dontSendNotification);
-    about_.setFont(juce::FontOptions(12.0f));
-    about_.setColour(juce::Label::textColourId, kDim);
-    about_.setJustificationType(juce::Justification::topLeft);
-    addAndMakeVisible(about_);
 
     panel_.setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 22.0f, juce::Font::bold));
     panel_.setColour(juce::Label::textColourId, kLed);
@@ -94,7 +89,6 @@ void Editor::setMode(bool hardware) {
         panelView_->setVisible(hardware);
         if (!hardware) panelView_->releaseAll();
     }
-    about_.setVisible(!hardware);
     panel_.setVisible(!hardware);
     for (auto& r : rows_) {
         r->name.setVisible(!hardware);
@@ -110,7 +104,7 @@ void Editor::layoutSize() {
         const int w = int(std::lround(L.width * kPanelPxPerMm)), h = int(std::lround(L.height * kPanelPxPerMm));
         setSize(w + 2 * kPad, kPad + 30 + 8 + h + 12 + 28 + 8 + 20 + kPad);
     } else {
-        setSize(kW, kPad + 30 + 34 + 52 + 12 + int(rows_.size()) * kRowH + 12 + 28 + 8 + 20 + kPad);
+        setSize(kW, kPad + 30 + 8 + 52 + 12 + int(rows_.size()) * kRowH + 12 + 28 + 8 + 20 + kPad);
     }
     resized();
 }
@@ -137,7 +131,7 @@ void Editor::resized() {
         status_.setBounds(b.removeFromTop(20));
         return;
     }
-    about_.setBounds(b.removeFromTop(34));
+    b.removeFromTop(8);
     panel_.setBounds(b.removeFromTop(52));
     b.removeFromTop(12);
     for (auto& r : rows_) {
@@ -182,6 +176,7 @@ void Editor::timerCallback() {
     if (!r.status.empty()) st += "  |  " + juce::String(r.status);
     status_.setText(st, juce::dontSendNotification);
     if (have && presetList_.empty()) refreshPresets();
+    presets_.setVisible(!have || !presetList_.empty());   // machines without factory presets: no menu
 }
 
 void Editor::refreshPresets() {
