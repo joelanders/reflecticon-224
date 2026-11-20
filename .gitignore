@@ -19,3 +19,11 @@ __pycache__/
 !224/juce-plugin/pgo/plugin.proftext
 !224/juce-plugin/pgo/plugin-linux.proftext
 
+# The other machines: never commit ROMs or firmware
+*.bin
+*.rom
+!dn780/core/ic44_hypothesis.bin
+/build-*/
+# web: built by web/build.sh
+/web/page/machines/
+/web/page/worklet-*.mjs

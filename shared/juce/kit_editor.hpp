@@ -1,0 +1,61 @@
+// kit::Editor: a plain, software-native editor built from the machine's parameter table, the same
+// for every machine. One row per parameter (slider, menu or switch) with the machine's own readout
+// beside it; the front panel's display as a strip when the machine has one; factory presets; the
+// ROM chooser (or drop files on the window) and a status line.
+//
+// A machine with a hardware panel (Info::panel) gets a toggle between that panel (kit::PanelView,
+// photo-faithful, raw keys) and these easy controls; both play the same machine.
+#pragma once
+#include "kit_panel.hpp"
+#include "kit_processor.hpp"
+#include <juce_gui_basics/juce_gui_basics.h>
+
+namespace kit {
+
+class Editor : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Timer {
+public:
+    explicit Editor(Processor& p);
+    ~Editor() override;
+
+    void paint(juce::Graphics&) override;
+    void resized() override;
+    bool isInterestedInFileDrag(const juce::StringArray&) override { return true; }
+    void filesDropped(const juce::StringArray& files, int, int) override;
+
+private:
+    void timerCallback() override;
+    void refreshPresets();
+    void chooseRoms();
+    void setMode(bool hardware);
+    void layoutSize();
+
+    struct Row {
+        juce::Label name, readout;
+        std::unique_ptr<juce::Slider> slider;
+        std::unique_ptr<juce::ComboBox> combo;
+        std::unique_ptr<juce::ToggleButton> toggle;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sa;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> ca;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ba;
+        juce::Component* control() const {
+            return slider ? (juce::Component*)slider.get() : combo ? (juce::Component*)combo.get() : toggle.get();
+        }
+    };
+
+    Processor& proc_;
+    juce::Label title_, about_, panel_, status_;
+    juce::ComboBox presets_;
+    juce::TextButton romsButton_{"Choose ROMs..."};
+    juce::TextButton modeButton_;
+    std::unique_ptr<PanelView> panelView_;
+    juce::TooltipWindow tooltips_{this, 600};
+    std::vector<std::unique_ptr<Row>> rows_;
+    std::vector<Preset> presetList_;
+    std::unique_ptr<juce::FileChooser> chooser_;
+    bool hasPanel_ = false;
+    uint64_t seenUpdates_ = ~0ull;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Editor)
+};
+
+}  // namespace kit
