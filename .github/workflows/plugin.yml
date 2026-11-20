@@ -36,36 +36,36 @@ jobs:
         if: steps.juce.outputs.cache-hit != 'true'
         run: git clone --depth 1 --branch "$JUCE_VERSION" https://github.com/juce-framework/JUCE.git "$JUCE_DIR"
 
-      # The machine's PGO profile (juce-plugin/pgo/plugin.proftext, trained by
+      # The machine's PGO profile (224/juce-plugin/pgo/plugin.proftext, trained by
       # scripts/pgo_train.sh; function names and counts, no ROM bytes), indexed
       # by this runner's own llvm-profdata: about 8% less CPU per block.
       - name: Build
         run: |
-          xcrun llvm-profdata merge -output=juce-plugin/build-profile.profdata juce-plugin/pgo/plugin.proftext
-          cmake -S juce-plugin -B juce-plugin/build -G "Unix Makefiles" \
+          xcrun llvm-profdata merge -output=224/juce-plugin/build-profile.profdata 224/juce-plugin/pgo/plugin.proftext
+          cmake -S 224/juce-plugin -B 224/juce-plugin/build -G "Unix Makefiles" \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
             -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR" \
-            -DLEXPLUG_PGO_PROFILE="$PWD/juce-plugin/build-profile.profdata"
-          cmake --build juce-plugin/build -j "$(sysctl -n hw.ncpu)" \
-            --target Reflexion224_AU Reflexion224_VST3 Reflexion224_Standalone
+            -DLEXPLUG_PGO_PROFILE="$PWD/224/juce-plugin/build-profile.profdata"
+          cmake --build 224/juce-plugin/build -j "$(sysctl -n hw.ncpu)" \
+            --target Reflecticon224_AU Reflecticon224_VST3 Reflecticon224_Standalone
 
       - name: Validate the AU
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R juce-plugin/build/Reflexion224_artefacts/Release/AU/Reflexion224.component ~/Library/Audio/Plug-Ins/Components/
+          cp -R 224/juce-plugin/build/Reflecticon224_artefacts/Release/AU/Reflecticon224.component ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
           auval -v aufx Rf24 Rflx
 
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
-          name="Reflexion224-$version-macOS"
-          built=juce-plugin/build/Reflexion224_artefacts/Release
+          name="Reflecticon224-$version-macOS"
+          built=224/juce-plugin/build/Reflecticon224_artefacts/Release
           mkdir -p "package/$name"
-          ditto "$built/AU/Reflexion224.component" "package/$name/Reflexion224.component"
-          ditto "$built/VST3/Reflexion224.vst3" "package/$name/Reflexion224.vst3"
-          ditto "$built/Standalone/Reflexion224.app" "package/$name/Reflexion224.app"
-          cp juce-plugin/scripts/macsetup_remove_quarantine.command "package/$name/"
+          ditto "$built/AU/Reflecticon224.component" "package/$name/Reflecticon224.component"
+          ditto "$built/VST3/Reflecticon224.vst3" "package/$name/Reflecticon224.vst3"
+          ditto "$built/Standalone/Reflecticon224.app" "package/$name/Reflecticon224.app"
+          cp 224/juce-plugin/scripts/macsetup_remove_quarantine.command "package/$name/"
           (cd package && ditto -c -k --sequesterRsrc --keepParent "$name" "$name.zip" && shasum -a 256 "$name.zip" > "$name.zip.sha256")
           cat package/*.sha256
           echo "NAME=$name" >> "$GITHUB_ENV"
@@ -100,10 +100,10 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S juce-plugin -B juce-plugin/build -G "Visual Studio 17 2022" -A x64 \
+          cmake -S 224/juce-plugin -B 224/juce-plugin/build -G "Visual Studio 17 2022" -A x64 \
             -DFETCHCONTENT_SOURCE_DIR_JUCE="$(cygpath -m "$JUCE_DIR")"
-          cmake --build juce-plugin/build --config Release --parallel 4 \
-            --target Reflexion224_VST3 Reflexion224_Standalone
+          cmake --build 224/juce-plugin/build --config Release --parallel 4 \
+            --target Reflecticon224_VST3 Reflecticon224_Standalone
 
       # No ROMs here: the plugin boots nothing and passes the audio through
       # dry, which is enough to check that a host can load, run and save it.
@@ -113,16 +113,16 @@ jobs:
           echo "c08e61ce3b96db41636f8ec7e76f4c7e2c13ebdac7fa1b5a1f52b4f32ec715ab  pluginval.zip" | sha256sum -c
           unzip -q pluginval.zip -d pluginval
           ./pluginval/pluginval.exe --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
-            --validate juce-plugin/build/Reflexion224_artefacts/Release/VST3/Reflexion224.vst3
+            --validate 224/juce-plugin/build/Reflecticon224_artefacts/Release/VST3/Reflecticon224.vst3
 
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
-          name="Reflexion224-$version-Windows-x64"
-          built=juce-plugin/build/Reflexion224_artefacts/Release
+          name="Reflecticon224-$version-Windows-x64"
+          built=224/juce-plugin/build/Reflecticon224_artefacts/Release
           mkdir -p "package/$name"
-          cp -R "$built/VST3/Reflexion224.vst3" "package/$name/"
-          cp "$built/Standalone/Reflexion224.exe" "package/$name/"
+          cp -R "$built/VST3/Reflecticon224.vst3" "package/$name/"
+          cp "$built/Standalone/Reflecticon224.exe" "package/$name/"
           (cd package && 7z a -tzip -mx=9 "$name.zip" "$name" > /dev/null && sha256sum "$name.zip" > "$name.zip.sha256")
           cat package/*.sha256
           echo "NAME=$name" >> "$GITHUB_ENV"
@@ -166,10 +166,10 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S juce-plugin -B juce-plugin/build -G Ninja \
+          cmake -S 224/juce-plugin -B 224/juce-plugin/build -G Ninja \
             -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR"
-          cmake --build juce-plugin/build --parallel "$(nproc)" \
-            --target Reflexion224_VST3 Reflexion224_Standalone
+          cmake --build 224/juce-plugin/build --parallel "$(nproc)" \
+            --target Reflecticon224_VST3 Reflecticon224_Standalone
 
       # No ROMs here: the plugin boots nothing and passes the audio through
       # dry, which is enough to check that a host can load, run and save it.
@@ -181,16 +181,16 @@ jobs:
           echo "c01c49d8063965c4c2dea8324468336768f5c9139e0b1caebde14c2400b55352  pluginval.zip" | sha256sum -c
           unzip -q pluginval.zip -d pluginval
           xvfb-run --auto-servernum ./pluginval/pluginval --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
-            --validate juce-plugin/build/Reflexion224_artefacts/Release/VST3/Reflexion224.vst3
+            --validate 224/juce-plugin/build/Reflecticon224_artefacts/Release/VST3/Reflecticon224.vst3
 
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
-          name="Reflexion224-$version-Linux-x86_64"
-          built=juce-plugin/build/Reflexion224_artefacts/Release
+          name="Reflecticon224-$version-Linux-x86_64"
+          built=224/juce-plugin/build/Reflecticon224_artefacts/Release
           mkdir -p "package/$name"
-          cp -R "$built/VST3/Reflexion224.vst3" "package/$name/"
-          cp "$built/Standalone/Reflexion224" "package/$name/"
+          cp -R "$built/VST3/Reflecticon224.vst3" "package/$name/"
+          cp "$built/Standalone/Reflecticon224" "package/$name/"
           (cd package && tar czf "$name.tar.gz" "$name" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
           cat package/*.sha256
           echo "NAME=$name" >> "$GITHUB_ENV"
@@ -207,7 +207,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: Reflexion224-*
+          pattern: Reflecticon224-*
           path: package
           merge-multiple: true
 
@@ -216,39 +216,41 @@ jobs:
         with:
           prerelease: true
           files: |
-            package/Reflexion224-${{ github.ref_name }}-macOS.zip
-            package/Reflexion224-${{ github.ref_name }}-macOS.zip.sha256
-            package/Reflexion224-${{ github.ref_name }}-Windows-x64.zip
-            package/Reflexion224-${{ github.ref_name }}-Windows-x64.zip.sha256
-            package/Reflexion224-${{ github.ref_name }}-Linux-x86_64.tar.gz
-            package/Reflexion224-${{ github.ref_name }}-Linux-x86_64.tar.gz.sha256
+            package/Reflecticon224-${{ github.ref_name }}-macOS.zip
+            package/Reflecticon224-${{ github.ref_name }}-macOS.zip.sha256
+            package/Reflecticon224-${{ github.ref_name }}-Windows-x64.zip
+            package/Reflecticon224-${{ github.ref_name }}-Windows-x64.zip.sha256
+            package/Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz
+            package/Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz.sha256
           fail_on_unmatched_files: true
           body: |
+            Reflexion224 is now Reflecticon 224 (company joelanders). Remove the old `Reflexion224` plugin bundles before installing: the new ones carry the same plugin codes, so saved sessions open with them, and hosts get confused by two copies. Your ROM folder (`Application Support/Reflexion224`) is still used.
+
             An alpha build for testing. It contains no firmware: open the plugin, click **Choose ROMs...** and pick the folder or `.zip` with your own Lexicon chip files. Until then it passes the audio through dry.
 
             ### macOS
 
             macOS 11 or later, Apple silicon or Intel. The bundles are ad-hoc signed and not notarized, so macOS quarantines them after a download and refuses to open them.
 
-            1. Unzip `Reflexion224-${{ github.ref_name }}-macOS.zip`. Then clear the quarantine on the unzipped folder by running this in Terminal (change the path if the folder is somewhere else):
+            1. Unzip `Reflecticon224-${{ github.ref_name }}-macOS.zip`. Then clear the quarantine on the unzipped folder by running this in Terminal (change the path if the folder is somewhere else):
                ```
-               xattr -cr ~/Downloads/Reflexion224-${{ github.ref_name }}-macOS
+               xattr -cr ~/Downloads/Reflecticon224-${{ github.ref_name }}-macOS
                ```
-            2. Copy `Reflexion224.component` to `~/Library/Audio/Plug-Ins/Components`, `Reflexion224.vst3` to `~/Library/Audio/Plug-Ins/VST3`, and `Reflexion224.app` wherever you like.
+            2. Copy `Reflecticon224.component` to `~/Library/Audio/Plug-Ins/Components`, `Reflecticon224.vst3` to `~/Library/Audio/Plug-Ins/VST3`, and `Reflecticon224.app` wherever you like.
             3. Restart your host or rescan its plug-ins.
 
             ### Windows
 
             Windows 10 or later, x64. The plugin and app are not code-signed, so SmartScreen may warn when the app is first opened: click **More info**, then **Run anyway**.
 
-            1. Unzip `Reflexion224-${{ github.ref_name }}-Windows-x64.zip`.
-            2. Copy the `Reflexion224.vst3` folder to `C:\Program Files\Common Files\VST3`, and `Reflexion224.exe` wherever you like.
+            1. Unzip `Reflecticon224-${{ github.ref_name }}-Windows-x64.zip`.
+            2. Copy the `Reflecticon224.vst3` folder to `C:\Program Files\Common Files\VST3`, and `Reflecticon224.exe` wherever you like.
             3. Restart your host or rescan its plug-ins.
 
             ### Linux
 
             x86_64, built on Ubuntu 24.04 (glibc 2.39 or later). The plugin and app are not code-signed.
 
-            1. Extract `Reflexion224-${{ github.ref_name }}-Linux-x86_64.tar.gz`.
-            2. Copy the `Reflexion224.vst3` folder to `~/.vst3` (or `/usr/lib/vst3`), and `Reflexion224` wherever you like.
+            1. Extract `Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz`.
+            2. Copy the `Reflecticon224.vst3` folder to `~/.vst3` (or `/usr/lib/vst3`), and `Reflecticon224` wherever you like.
             3. Restart your host or rescan its plug-ins.

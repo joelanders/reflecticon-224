@@ -1,6 +1,6 @@
 # Your own firmware and captures: never commit them.
-/firmware/
-/captures/
+/224/firmware/
+/224/captures/
 
 # Build output
 build/
@@ -8,12 +8,21 @@ out/
 reports/
 __pycache__/
 .DS_Store
-/web-demo/page/lexicon224x.js
-/web-demo/page/lexicon224x.wasm
-/juce-plugin/build*/
+/224/web-demo/page/lexicon224x.js
+/224/web-demo/page/lexicon224x.wasm
+/224/juce-plugin/build*/
 
 # make check's list of skipped targets
-/.make-skipped
-/8080/refs/
-juce-plugin/pgo/*
-!juce-plugin/pgo/plugin.proftext
+/224/.make-skipped
+/224/8080/refs/
+224/juce-plugin/pgo/*
+!224/juce-plugin/pgo/plugin.proftext
+
+# The other machines: never commit ROMs or firmware
+*.bin
+*.rom
+!dn780/core/ic44_hypothesis.bin
+/build-*/
+# web: built by web/build.sh
+/web/page/machines/
+/web/page/worklet-*.mjs

@@ -1,4 +1,4 @@
-# Build the web demo's WebAssembly and publish web-demo/page on GitHub Pages.
+# Build the web demo's WebAssembly and publish 224/web-demo/page on GitHub Pages.
 name: Pages
 
 on:
@@ -24,11 +24,11 @@ jobs:
         with:
           version: 5.0.1
       - name: Build the WebAssembly
-        run: python3 web-demo/build.py
+        run: python3 224/web-demo/build.py
       - name: Assemble the site
         run: |
           mkdir _site
-          cp -R web-demo/page/. _site/
+          cp -R 224/web-demo/page/. _site/
           rm -f _site/serve.py
       - uses: actions/upload-pages-artifact@v5
         with:
