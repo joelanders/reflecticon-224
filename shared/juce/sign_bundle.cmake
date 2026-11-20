@@ -1,4 +1,4 @@
-# Ad-hoc code signing for the plugin's bundles (AU, VST3, Standalone). Copied from reflecticon-224.
+# Ad-hoc code signing for the plugin's bundles (AU, VST3, Standalone). Copied from 224/juce-plugin.
 # No Developer ID, no notarization: the bundles are signed with "-" so that
 # Apple silicon loads them and `codesign --verify --deep --strict` passes.
 #
