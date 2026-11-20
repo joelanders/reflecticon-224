@@ -146,8 +146,9 @@ void Editor::resized() {
     const float scale = float(getWidth()) / float(nativeW_);
     proc_.editorScale = scale;
     layoutNative();
+    // The resize corner is placed by JUCE in window coordinates, so it stays unscaled.
     for (auto* c : getChildren())
-        if (c != &tooltips_) c->setTransform(juce::AffineTransform::scale(scale));
+        if (c != &tooltips_ && c != resizableCorner.get()) c->setTransform(juce::AffineTransform::scale(scale));
 }
 
 void Editor::layoutNative() {
