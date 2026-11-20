@@ -7,7 +7,7 @@
 # Without FETCHCONTENT_SOURCE_DIR_JUCE, JUCE 8.0.14 is fetched from GitHub.
 # Bring your own ROMs: nothing here or in the binaries holds ROM bytes.
 cmake_minimum_required(VERSION 3.22)
-project(Reflecticon VERSION 0.1.0 LANGUAGES C CXX)
+project(Reflecticon VERSION 0.2.0 LANGUAGES C CXX)
 if(APPLE)
     enable_language(OBJC OBJCXX)
 endif()

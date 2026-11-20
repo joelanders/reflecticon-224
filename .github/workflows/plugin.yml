@@ -1,8 +1,10 @@
-# The plugin for macOS (AU, VST3 and the standalone app), universal (Apple
-# silicon and Intel), ad-hoc signed; for Windows x64 (VST3 and the
-# standalone app), unsigned; and for Linux x86_64 (VST3 and the standalone
-# app), unsigned. A tag v* publishes them all as one prerelease; a manual run
-# only keeps the archives as workflow artifacts.
+# Every machine's plugin: the 224 (224/juce-plugin) and the RMX16, DMX 15-80,
+# DN780 and StarGate 323 (the root CMake project). For macOS (AU, VST3 and the
+# standalone app), universal (Apple silicon and Intel), ad-hoc signed; for
+# Windows x64 (VST3 and the standalone app), unsigned; and for Linux x86_64
+# (VST3 and the standalone app), unsigned. One archive per machine and
+# platform. A tag v* publishes them all as one prerelease; a manual run only
+# keeps the archives as workflow artifacts.
 name: Plugin
 
 on:
@@ -15,6 +17,9 @@ permissions:
 
 env:
   JUCE_VERSION: "8.0.14"
+  # The machines the root CMake project builds: folder (= CMake target prefix)
+  # and the product name their bundles carry.
+  MACHINES: "rmx16:ReflecticonRMX16 dmx1580:ReflecticonDMX1580 dn780:ReflecticonDN780 sg323:ReflecticonSG323"
 
 jobs:
   macos:
@@ -56,6 +61,24 @@ jobs:
           killall -9 AudioComponentRegistrar || true
           auval -v aufx Rf24 Rflx
 
+      - name: Build the other machines
+        run: |
+          cmake -S . -B build-machines -G "Unix Makefiles" \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR"
+          targets=""
+          for m in $MACHINES; do id=${m%%:*}; targets="$targets ${id}_AU ${id}_VST3 ${id}_Standalone"; done
+          cmake --build build-machines -j "$(sysctl -n hw.ncpu)" --target $targets
+
+      - name: Validate their AUs
+        run: |
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            cp -R "build-machines/$id/${id}_artefacts/Release/AU/$product.component" ~/Library/Audio/Plug-Ins/Components/
+          done
+          killall -9 AudioComponentRegistrar || true
+          for code in Rx16 Dm15 Dn78 Sg32; do auval -v aufx $code Rflx; done
+
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
@@ -67,13 +90,25 @@ jobs:
           ditto "$built/Standalone/Reflecticon224.app" "package/$name/Reflecticon224.app"
           cp 224/juce-plugin/scripts/macsetup_remove_quarantine.command "package/$name/"
           (cd package && ditto -c -k --sequesterRsrc --keepParent "$name" "$name.zip" && shasum -a 256 "$name.zip" > "$name.zip.sha256")
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            name="$product-$version-macOS"
+            built="build-machines/$id/${id}_artefacts/Release"
+            mkdir -p "package/$name"
+            ditto "$built/AU/$product.component" "package/$name/$product.component"
+            ditto "$built/VST3/$product.vst3" "package/$name/$product.vst3"
+            ditto "$built/Standalone/$product.app" "package/$name/$product.app"
+            sed "s/^PRODUCT=\"Reflecticon224\"/PRODUCT=\"$product\"/" 224/juce-plugin/scripts/macsetup_remove_quarantine.command \
+              > "package/$name/macsetup_remove_quarantine.command"
+            chmod +x "package/$name/macsetup_remove_quarantine.command"
+            (cd package && ditto -c -k --sequesterRsrc --keepParent "$name" "$name.zip" && shasum -a 256 "$name.zip" > "$name.zip.sha256")
+          done
           cat package/*.sha256
-          echo "NAME=$name" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.NAME }}
-          path: package/${{ env.NAME }}.zip*
+          name: release-macos
+          path: package/*.zip*
 
   windows:
     runs-on: windows-2022
@@ -115,6 +150,22 @@ jobs:
           ./pluginval/pluginval.exe --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
             --validate 224/juce-plugin/build/Reflecticon224_artefacts/Release/VST3/Reflecticon224.vst3
 
+      - name: Build the other machines
+        run: |
+          cmake -S . -B build-machines -G "Visual Studio 17 2022" -A x64 \
+            -DFETCHCONTENT_SOURCE_DIR_JUCE="$(cygpath -m "$JUCE_DIR")"
+          targets=""
+          for m in $MACHINES; do id=${m%%:*}; targets="$targets ${id}_VST3 ${id}_Standalone"; done
+          cmake --build build-machines --config Release --parallel 4 --target $targets
+
+      - name: Validate their VST3s
+        run: |
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            ./pluginval/pluginval.exe --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
+              --validate "build-machines/$id/${id}_artefacts/Release/VST3/$product.vst3"
+          done
+
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
@@ -124,13 +175,21 @@ jobs:
           cp -R "$built/VST3/Reflecticon224.vst3" "package/$name/"
           cp "$built/Standalone/Reflecticon224.exe" "package/$name/"
           (cd package && 7z a -tzip -mx=9 "$name.zip" "$name" > /dev/null && sha256sum "$name.zip" > "$name.zip.sha256")
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            name="$product-$version-Windows-x64"
+            built="build-machines/$id/${id}_artefacts/Release"
+            mkdir -p "package/$name"
+            cp -R "$built/VST3/$product.vst3" "package/$name/"
+            cp "$built/Standalone/$product.exe" "package/$name/"
+            (cd package && 7z a -tzip -mx=9 "$name.zip" "$name" > /dev/null && sha256sum "$name.zip" > "$name.zip.sha256")
+          done
           cat package/*.sha256
-          echo "NAME=$name" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.NAME }}
-          path: package/${{ env.NAME }}.zip*
+          name: release-windows
+          path: package/*.zip*
 
   linux:
     runs-on: ubuntu-24.04
@@ -215,6 +274,23 @@ jobs:
           xvfb-run --auto-servernum ./pluginval/pluginval --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
             --validate 224/juce-plugin/build/Reflecticon224_artefacts/Release/VST3/Reflecticon224.vst3
 
+      - name: Build the other machines
+        run: |
+          cmake -S . -B build-machines -G Ninja \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DFETCHCONTENT_SOURCE_DIR_JUCE="$JUCE_DIR"
+          targets=""
+          for m in $MACHINES; do id=${m%%:*}; targets="$targets ${id}_VST3 ${id}_Standalone"; done
+          cmake --build build-machines --parallel "$(nproc)" --target $targets
+
+      - name: Validate their VST3s
+        run: |
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            xvfb-run --auto-servernum ./pluginval/pluginval --strictness-level 5 --skip-gui-tests --timeout-ms 300000 \
+              --validate "build-machines/$id/${id}_artefacts/Release/VST3/$product.vst3"
+          done
+
       - name: Package
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then version="$GITHUB_REF_NAME"; else version="dev-${GITHUB_SHA::7}"; fi
@@ -224,13 +300,21 @@ jobs:
           cp -R "$built/VST3/Reflecticon224.vst3" "package/$name/"
           cp "$built/Standalone/Reflecticon224" "package/$name/"
           (cd package && tar czf "$name.tar.gz" "$name" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          for m in $MACHINES; do
+            id=${m%%:*}; product=${m##*:}
+            name="$product-$version-Linux-x86_64"
+            built="build-machines/$id/${id}_artefacts/Release"
+            mkdir -p "package/$name"
+            cp -R "$built/VST3/$product.vst3" "package/$name/"
+            cp "$built/Standalone/$product" "package/$name/"
+            (cd package && tar czf "$name.tar.gz" "$name" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
+          done
           cat package/*.sha256
-          echo "NAME=$name" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.NAME }}
-          path: package/${{ env.NAME }}.tar.gz*
+          name: release-linux
+          path: package/*.tar.gz*
 
   release:
     if: github.ref_type == 'tag'
@@ -239,50 +323,63 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: Reflecticon224-*
+          pattern: release-*
           path: package
           merge-multiple: true
+
+      # Five machines on three platforms: 15 archives, each with its .sha256.
+      - name: Check every archive is here
+        run: |
+          ls package
+          n=$(ls package | grep -cvE '\.sha256$')
+          if [ "$n" != 15 ]; then echo "expected 15 archives, found $n" >&2; exit 1; fi
 
       - name: Publish the prerelease
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          files: |
-            package/Reflecticon224-${{ github.ref_name }}-macOS.zip
-            package/Reflecticon224-${{ github.ref_name }}-macOS.zip.sha256
-            package/Reflecticon224-${{ github.ref_name }}-Windows-x64.zip
-            package/Reflecticon224-${{ github.ref_name }}-Windows-x64.zip.sha256
-            package/Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz
-            package/Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz.sha256
+          files: package/*
           fail_on_unmatched_files: true
           body: |
-            Reflexion224 is now Reflecticon 224 (company joelanders). Remove the old `Reflexion224` plugin bundles before installing: the new ones carry the same plugin codes, so saved sessions open with them, and hosts get confused by two copies. Your ROM folder (`Application Support/Reflexion224`) is still used.
+            Plugins for five machines, each its own archive per platform. Pick the ones you want:
 
-            An alpha build for testing. It contains no firmware: open the plugin, click **Choose ROMs...** and pick the folder or `.zip` with your own Lexicon chip files. Until then it passes the audio through dry.
+            | Archive | Plugin (as hosts show it) | Your ROMs |
+            |---|---|---|
+            | `Reflecticon224-…` | Reflecticon 224 | Lexicon 224 / 224X / 224XL chip files (a folder or `.zip`) |
+            | `ReflecticonRMX16-…` | Reflecticon RMX16 | AMS RMX16 v3.2: R316 and IC1-IC4 |
+            | `ReflecticonDMX1580-…` | Reflecticon DMX 15-80 | AMS DMX 15-80S: DMX23-3 and DMX-10-SHL-406-1/2/3 |
+            | `ReflecticonDN780-…` | Reflecticon DN780 | Klark Teknik DN780 v2.2 EPROM image |
+            | `ReflecticonSG323-…` | Reflecticon StarGate 323 | Ursa Major StarGate 323: the 0803-0808 PROM images, binary |
+
+            Alpha builds for testing. They contain no firmware: open a plugin, choose (or drop) your own ROM files, and it remembers them. Until then it passes the audio through dry. All are by joelanders, manufacturer code `Rflx`.
+
+            **Upgrading the 224 from Reflexion224:** remove the old `Reflexion224` plugin bundles before installing. The new ones carry the same plugin codes, so saved sessions open with them, and hosts get confused by two copies. Your ROM folder (`Application Support/Reflexion224`) is still used.
+
+            In the steps below, `<Name>` is the archive's product: `Reflecticon224`, `ReflecticonRMX16`, `ReflecticonDMX1580`, `ReflecticonDN780` or `ReflecticonSG323`.
 
             ### macOS
 
             macOS 11 or later, Apple silicon or Intel. The bundles are ad-hoc signed and not notarized, so macOS quarantines them after a download and refuses to open them.
 
-            1. Unzip `Reflecticon224-${{ github.ref_name }}-macOS.zip`. Then clear the quarantine on the unzipped folder by running this in Terminal (change the path if the folder is somewhere else):
+            1. Unzip `<Name>-${{ github.ref_name }}-macOS.zip`. Then clear the quarantine on the unzipped folder by running this in Terminal (change the path if the folder is somewhere else), or double-click `macsetup_remove_quarantine.command` inside it:
                ```
-               xattr -cr ~/Downloads/Reflecticon224-${{ github.ref_name }}-macOS
+               xattr -cr ~/Downloads/<Name>-${{ github.ref_name }}-macOS
                ```
-            2. Copy `Reflecticon224.component` to `~/Library/Audio/Plug-Ins/Components`, `Reflecticon224.vst3` to `~/Library/Audio/Plug-Ins/VST3`, and `Reflecticon224.app` wherever you like.
+            2. Copy `<Name>.component` to `~/Library/Audio/Plug-Ins/Components`, `<Name>.vst3` to `~/Library/Audio/Plug-Ins/VST3`, and `<Name>.app` wherever you like.
             3. Restart your host or rescan its plug-ins.
 
             ### Windows
 
-            Windows 10 or later, x64. The plugin and app are not code-signed, so SmartScreen may warn when the app is first opened: click **More info**, then **Run anyway**.
+            Windows 10 or later, x64. The plugins and apps are not code-signed, so SmartScreen may warn when an app is first opened: click **More info**, then **Run anyway**.
 
-            1. Unzip `Reflecticon224-${{ github.ref_name }}-Windows-x64.zip`.
-            2. Copy the `Reflecticon224.vst3` folder to `C:\Program Files\Common Files\VST3`, and `Reflecticon224.exe` wherever you like.
+            1. Unzip `<Name>-${{ github.ref_name }}-Windows-x64.zip`.
+            2. Copy the `<Name>.vst3` folder to `C:\Program Files\Common Files\VST3`, and `<Name>.exe` wherever you like.
             3. Restart your host or rescan its plug-ins.
 
             ### Linux
 
-            x86_64, built on Ubuntu 24.04 (glibc 2.39 or later). The plugin and app are not code-signed.
+            x86_64, built on Ubuntu 24.04 (glibc 2.39 or later). The plugins and apps are not code-signed.
 
-            1. Extract `Reflecticon224-${{ github.ref_name }}-Linux-x86_64.tar.gz`.
-            2. Copy the `Reflecticon224.vst3` folder to `~/.vst3` (or `/usr/lib/vst3`), and `Reflecticon224` wherever you like.
+            1. Extract `<Name>-${{ github.ref_name }}-Linux-x86_64.tar.gz`.
+            2. Copy the `<Name>.vst3` folder to `~/.vst3` (or `/usr/lib/vst3`), and `<Name>` wherever you like.
             3. Restart your host or rescan its plug-ins.
