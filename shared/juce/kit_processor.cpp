@@ -154,13 +154,14 @@ void Processor::boot(const std::string& state) {
 
 const juce::StringArray& Processor::syncChoices() {
     static const juce::StringArray c{"Off",  "1/32", "1/16T", "1/16", "1/16D", "1/8T", "1/8", "1/8D",
-                                     "1/4T", "1/4",  "1/4D",  "1/2T", "1/2",   "1/2D", "1/1"};
+                                     "1/4T", "1/4",  "1/4D",  "1/2T", "1/2",   "1/2D", "1/1",
+                                     "2/1",  "4/1"};   // append only: sessions save the index
     return c;
 }
 
 double Processor::syncBeats(int choice) {
     static const double b[] = {0,         0.125, 0.25 * 2 / 3, 0.25, 0.375, 0.5 * 2 / 3, 0.5, 0.75,
-                               2.0 / 3.0, 1.0,   1.5,          4.0 / 3.0, 2.0, 3.0, 4.0};
+                               2.0 / 3.0, 1.0,   1.5,          4.0 / 3.0, 2.0, 3.0, 4.0, 8.0, 16.0};
     return choice > 0 && choice < int(std::size(b)) ? b[choice] : 0.0;
 }
 
@@ -177,7 +178,9 @@ void Processor::updateSynced() {
         const double beats = syncBeats(int(std::lround(s->choice->load())));
         float v = s->knob->load();
         if (beats > 0 && bpm > 0) {
-            v = float(std::clamp(60000.0 / bpm * beats, double(p.min), double(p.max)));
+            // a time in ms is the note's length; a rate in Hz is one cycle per note
+            const double x = p.unit == "Hz" ? bpm / 60.0 / beats : 60000.0 / bpm * beats;
+            v = float(std::clamp(x, double(p.min), double(p.max)));
             if (p.kind == Param::Int) v = std::round(v);
         }
         s->value.store(v);

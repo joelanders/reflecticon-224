@@ -26,10 +26,11 @@ struct Param {
     std::vector<std::string> choices;   // Choice: the names (min = 0, max = size - 1)
     std::string unit;                   // Float/Int: shown after the value when no readout
     std::string help;                   // the editor's tooltip: what the control does (describe())
-    bool tempo_sync = false;            // a time in ms the plugin can set from the host tempo (tempo_sync())
+    bool tempo_sync = false;            // a time (ms) or rate (Hz) the host tempo may set (tempo_sync())
 };
 
-// Times in ms that may follow the host tempo: each gets a Sync menu (off or a note value).
+// Times in ms, or rates in Hz (one cycle per note), that may follow the host tempo: each gets a
+// Sync menu (off or a note value).
 inline void tempo_sync(std::vector<Param>& params, std::initializer_list<const char*> ids) {
     for (auto* id : ids)
         for (auto& p : params)

@@ -55,8 +55,11 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
             r->sync = std::make_unique<juce::ComboBox>();
             r->sync->addItemList(Processor::syncChoices(), 1);
             r->syncA = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(proc_.params, Processor::syncId(prm), *r->sync);
-            r->sync->setTooltip("Follow the host tempo: the time is this note value (T triplet, D dotted), within the "
-                                "control's range. Off: the control sets it.");
+            r->sync->setTooltip(prm.unit == "Hz"
+                                    ? "Follow the host tempo: one cycle per this note value (T triplet, D dotted), within "
+                                      "the control's range. Off: the control sets it."
+                                    : "Follow the host tempo: the time is this note value (T triplet, D dotted), within the "
+                                      "control's range. Off: the control sets it.");
             addAndMakeVisible(*r->sync);
         }
         r->name.setTooltip(prm.help);
