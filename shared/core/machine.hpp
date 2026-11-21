@@ -30,8 +30,8 @@ struct Param {
     bool tempo_sync = false;            // a time (ms) or rate (Hz) the host tempo may set (tempo_sync())
 };
 
-// A box in the editor for related controls (a channel's), side by side with the other boxes, the
-// controls named shorter inside it: group(i.params, "Channel A", {{"delayA", "Delay"}, ...}).
+// A box in the editor for related controls (a channel's), two boxes to a row in Info::groups order,
+// the controls named shorter inside it: group(i.params, "Channel A", {{"delayA", "Delay"}, ...}).
 inline void group(std::vector<Param>& params, const char* name,
                   std::initializer_list<std::pair<const char*, const char*>> members) {
     for (auto& [id, short_name] : members)
@@ -119,6 +119,8 @@ struct Info {
     std::vector<RomSpec> roms;
     std::string about;         // one or two lines for the editor (what it is, non-affiliation)
     PanelLayout panel;         // the front panel for hardware mode; no elements = easy mode only
+    std::vector<std::string> groups;   // the editor's boxes in order (Param::group), two to a row
+    std::string mix_group;             // the box for the kit's Mix control, if any
 };
 
 struct MachineType {

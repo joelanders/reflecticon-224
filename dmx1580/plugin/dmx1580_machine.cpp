@@ -260,6 +260,12 @@ kit::Info make_info() {
                                        {"fbGainA", "F/B Gain"}, {"fbFilterA", "F/B Filter"}, {"phaseA", "Phase out"}});
     kit::group(i.params, "Channel B", {{"delayB", "Delay"}, {"pitchB", "Pitch"}, {"inB", "Input"},
                                        {"fbGainB", "F/B Gain"}, {"fbFilterB", "F/B Filter"}});
+    kit::group(i.params, "VCO", {{"vco", "XTAL/VCO"}, {"vcoSpeed", "Speed"}, {"vcoDepth", "Depth"}});
+    kit::group(i.params, "Lock-in", {{"lockin", "Lock In"}, {"trigger", "Trigger"}});
+    kit::group(i.params, "In / Out", {{"out", "Output"}, {"monoIn", "Mono input"}, {"mixOut", "Mix outputs"}});
+    kit::group(i.params, "Unit", {{"ram", "RAM"}, {"boards", "Pitch boards"}, {"analog", "Analog"}, {"smooth", "Smooth pitch"}});
+    i.groups = {"Channel A", "Channel B", "VCO", "Lock-in", "In / Out", "Unit"};
+    i.mix_group = "In / Out";
     kit::describe(i.params, {
         {"delayA",
          "Channel A's delay time, typed into the unit's keypad. The longest delay depends on RAM per channel."},

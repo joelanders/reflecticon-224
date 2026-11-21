@@ -30,6 +30,8 @@ private:
     void layoutSize();
     void layoutNative();
     int easyHeight() const;   // the rows' part of the easy layout
+    int columns() const { return std::min(2, int(groups_.size())); }
+    std::vector<int> groupCounts(int& shared) const;
 
     struct Row {
         juce::Label name, readout;

@@ -32,6 +32,7 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
     panel_.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(panel_);
 
+    for (auto& g : info.groups) groups_.push_back(juce::String(g));
     for (auto& prm : info.params) {
         auto r = std::make_unique<Row>();
         if (!prm.group.empty()) {
@@ -83,6 +84,11 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
         r->readout.setFont(juce::FontOptions(15.0f, juce::Font::bold));
         r->slider = std::make_unique<juce::Slider>(juce::Slider::LinearHorizontal, juce::Slider::NoTextBox);
         r->sa = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(proc_.params, "mix", *r->slider);
+        if (!info.mix_group.empty()) {
+            auto at = std::find(groups_.begin(), groups_.end(), juce::String(info.mix_group));
+            r->group = int(at - groups_.begin());
+            if (at == groups_.end()) groups_.push_back(juce::String(info.mix_group));
+        }
         const char* help = "Dry signal against the effect, after the machine: 100 % is the effect alone, as the hardware gives it.";
         r->name.setTooltip(help);
         r->slider->setTooltip(help);
@@ -148,7 +154,7 @@ void Editor::layoutSize() {
         nativeH_ = kPad + 30 + 8 + h + 12 + 28 + 8 + 20 + kPad;
     } else {
         const int g = int(groups_.size());
-        nativeW_ = g ? 2 * kPad + g * kBoxW + (g - 1) * kGap : kW;
+        nativeW_ = g ? 2 * kPad + columns() * kBoxW + (columns() - 1) * kGap : kW;
         nativeH_ = kPad + 30 + 8 + 52 + 12 + easyHeight() + 12 + 28 + 8 + 20 + kPad;
     }
     const float scale = std::clamp(proc_.editorScale, 0.5f, 3.0f);
@@ -158,14 +164,28 @@ void Editor::layoutSize() {
     resized();
 }
 
+std::vector<int> Editor::groupCounts(int& shared) const {
+    std::vector<int> n(groups_.size(), 0);
+    shared = 0;
+    for (auto& r : rows_) r->group >= 0 ? n[size_t(r->group)]++ : shared++;
+    return n;
+}
+
+// Boxes two to a row (each row as tall as its tallest box), then the shared controls in as many
+// columns.
 int Editor::easyHeight() const {
     if (groups_.empty()) return int(rows_.size()) * kRowH;
-    const int g = int(groups_.size());
-    std::vector<int> n(size_t(g), 0);
     int shared = 0;
-    for (auto& r : rows_) r->group >= 0 ? n[size_t(r->group)]++ : shared++;
-    const int most = *std::max_element(n.begin(), n.end());
-    return kBoxHead + most * kRowH + kBoxFoot + 12 + (shared + g - 1) / g * kRowH;
+    auto n = groupCounts(shared);
+    const int cols = columns();
+    int h = 0;
+    for (size_t k = 0; k < n.size(); k += size_t(cols)) {
+        int most = 0;
+        for (size_t j = k; j < std::min(n.size(), k + size_t(cols)); j++) most = std::max(most, n[j]);
+        h += (k ? kGap : 0) + kBoxHead + most * kRowH + kBoxFoot;
+    }
+    if (shared) h += 12 + (shared + cols - 1) / cols * kRowH;
+    return h;
 }
 
 Editor::~Editor() { stopTimer(); }
@@ -230,29 +250,37 @@ void Editor::layoutNative() {
     if (groups_.empty()) {
         for (auto& r : rows_) place(*r, b.removeFromTop(kRowH), kNameW);
     } else {
-        // the boxes side by side, then the shared controls in as many columns, top to bottom
-        const int g = int(groups_.size());
+        const int cols = columns();
         auto rows = b.removeFromTop(easyHeight());
-        std::vector<int> n(size_t(g), 0);
+        int nShared = 0;
+        auto n = groupCounts(nShared);
         std::vector<Row*> shared;
-        for (auto& r : rows_) r->group >= 0 ? (void)n[size_t(r->group)]++ : shared.push_back(r.get());
-        auto area = rows.removeFromTop(kBoxHead + *std::max_element(n.begin(), n.end()) * kRowH + kBoxFoot);
-        for (int k = 0; k < g; k++) {
-            auto box = area.removeFromLeft(kBoxW);
-            area.removeFromLeft(kGap);
-            boxes_.push_back(box);
-            auto in = box.reduced(kBoxInset, 0);
-            in.removeFromTop(kBoxHead);
-            for (auto& r : rows_)
-                if (r->group == k) place(*r, in.removeFromTop(kRowH), kBoxNameW);
+        for (auto& r : rows_)
+            if (r->group < 0) shared.push_back(r.get());
+        for (size_t k = 0; k < n.size(); k += size_t(cols)) {
+            int most = 0;
+            for (size_t j = k; j < std::min(n.size(), k + size_t(cols)); j++) most = std::max(most, n[j]);
+            if (k) rows.removeFromTop(kGap);
+            auto area = rows.removeFromTop(kBoxHead + most * kRowH + kBoxFoot);
+            for (size_t j = k; j < std::min(n.size(), k + size_t(cols)); j++) {
+                auto box = area.removeFromLeft(kBoxW);
+                area.removeFromLeft(kGap);
+                boxes_.push_back(box);
+                auto in = box.reduced(kBoxInset, 0);
+                in.removeFromTop(kBoxHead);
+                for (auto& r : rows_)
+                    if (r->group == int(j)) place(*r, in.removeFromTop(kRowH), kBoxNameW);
+            }
         }
-        rows.removeFromTop(12);
-        const int per = (int(shared.size()) + g - 1) / g;
-        for (int k = 0; k < g; k++) {
-            auto col = rows.removeFromLeft(kBoxW).reduced(kBoxInset, 0);
-            rows.removeFromLeft(kGap);
-            for (int j = k * per; j < std::min(int(shared.size()), (k + 1) * per); j++)
-                place(*shared[size_t(j)], col.removeFromTop(kRowH), kNameW);
+        if (!shared.empty()) {
+            rows.removeFromTop(12);
+            const int per = (int(shared.size()) + cols - 1) / cols;
+            for (int k = 0; k < cols; k++) {
+                auto col = rows.removeFromLeft(kBoxW).reduced(kBoxInset, 0);
+                rows.removeFromLeft(kGap);
+                for (int j = k * per; j < std::min(int(shared.size()), (k + 1) * per); j++)
+                    place(*shared[size_t(j)], col.removeFromTop(kRowH), kNameW);
+            }
         }
     }
     b.removeFromTop(12);
