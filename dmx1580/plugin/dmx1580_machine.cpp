@@ -256,6 +256,10 @@ kit::Info make_info() {
         {"smooth", "Smooth pitch (later units)", K::Bool, 0, 1, 0, {}, ""},
     };
     kit::tempo_sync(i.params, {"delayA", "delayB", "vcoSpeed"});
+    kit::group(i.params, "Channel A", {{"delayA", "Delay"}, {"pitchA", "Pitch"}, {"inA", "Input"},
+                                       {"fbGainA", "F/B Gain"}, {"fbFilterA", "F/B Filter"}, {"phaseA", "Phase out"}});
+    kit::group(i.params, "Channel B", {{"delayB", "Delay"}, {"pitchB", "Pitch"}, {"inB", "Input"},
+                                       {"fbGainB", "F/B Gain"}, {"fbFilterB", "F/B Filter"}});
     kit::describe(i.params, {
         {"delayA",
          "Channel A's delay time, typed into the unit's keypad. The longest delay depends on RAM per channel."},

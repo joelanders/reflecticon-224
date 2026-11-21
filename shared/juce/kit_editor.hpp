@@ -29,6 +29,7 @@ private:
     void setMode(bool hardware);
     void layoutSize();
     void layoutNative();
+    int easyHeight() const;   // the rows' part of the easy layout
 
     struct Row {
         juce::Label name, readout;
@@ -40,6 +41,7 @@ private:
         std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ba;
         std::unique_ptr<juce::ComboBox> sync;   // Param::tempo_sync: off or a note value
         std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncA;
+        int group = -1;   // index in groups_, or -1: the shared controls under the boxes
         juce::Component* control() const {
             return slider ? (juce::Component*)slider.get() : combo ? (juce::Component*)combo.get() : toggle.get();
         }
@@ -56,6 +58,8 @@ private:
     std::vector<Preset> presetList_;
     std::unique_ptr<juce::FileChooser> chooser_;
     bool hasPanel_ = false;
+    std::vector<juce::String> groups_;          // Param::group names, in order
+    std::vector<juce::Rectangle<int>> boxes_;   // their boxes, in the native layout
     int nativeW_ = 0, nativeH_ = 0;   // the layout's own size; the window shows it scaled
     uint64_t seenUpdates_ = ~0ull;
 

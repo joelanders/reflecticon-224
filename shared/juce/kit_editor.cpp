@@ -6,6 +6,8 @@ namespace {
 const juce::Colour kBg{0xff1d1f22}, kPanel{0xff0b0b0b}, kLed{0xffff3b2f}, kText{0xffe6e6e6}, kDim{0xff7a7d82},
     kAccent{0xffd9a441};
 constexpr int kW = 560, kRowH = 30, kPad = 16, kNameW = 150, kReadW = 130;
+// grouped controls: boxes kBoxW wide, kGap apart; the shared controls in columns as wide below
+constexpr int kBoxW = 520, kGap = 16, kBoxHead = 28, kBoxFoot = 8, kBoxNameW = 104, kBoxInset = 10;
 constexpr float kPanelPxPerMm = 2.4f;   // the hardware panel's scale (a 19" face is ~1160 px)
 }  // namespace
 
@@ -32,7 +34,13 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
 
     for (auto& prm : info.params) {
         auto r = std::make_unique<Row>();
-        r->name.setText(prm.name, juce::dontSendNotification);
+        if (!prm.group.empty()) {
+            const juce::String g(prm.group);
+            auto at = std::find(groups_.begin(), groups_.end(), g);
+            r->group = int(at - groups_.begin());
+            if (at == groups_.end()) groups_.push_back(g);
+        }
+        r->name.setText(r->group >= 0 && !prm.short_name.empty() ? prm.short_name : prm.name, juce::dontSendNotification);
         r->name.setColour(juce::Label::textColourId, kText);
         r->readout.setColour(juce::Label::textColourId, kAccent);
         r->readout.setJustificationType(juce::Justification::centredRight);
@@ -139,8 +147,9 @@ void Editor::layoutSize() {
         nativeW_ = w + 2 * kPad;
         nativeH_ = kPad + 30 + 8 + h + 12 + 28 + 8 + 20 + kPad;
     } else {
-        nativeW_ = kW;
-        nativeH_ = kPad + 30 + 8 + 52 + 12 + int(rows_.size()) * kRowH + 12 + 28 + 8 + 20 + kPad;
+        const int g = int(groups_.size());
+        nativeW_ = g ? 2 * kPad + g * kBoxW + (g - 1) * kGap : kW;
+        nativeH_ = kPad + 30 + 8 + 52 + 12 + easyHeight() + 12 + 28 + 8 + 20 + kPad;
     }
     const float scale = std::clamp(proc_.editorScale, 0.5f, 3.0f);
     setResizeLimits(nativeW_ / 2, nativeH_ / 2, nativeW_ * 3, nativeH_ * 3);
@@ -149,15 +158,40 @@ void Editor::layoutSize() {
     resized();
 }
 
+int Editor::easyHeight() const {
+    if (groups_.empty()) return int(rows_.size()) * kRowH;
+    const int g = int(groups_.size());
+    std::vector<int> n(size_t(g), 0);
+    int shared = 0;
+    for (auto& r : rows_) r->group >= 0 ? n[size_t(r->group)]++ : shared++;
+    const int most = *std::max_element(n.begin(), n.end());
+    return kBoxHead + most * kRowH + kBoxFoot + 12 + (shared + g - 1) / g * kRowH;
+}
+
 Editor::~Editor() { stopTimer(); }
 
-void Editor::paint(juce::Graphics& g) { g.fillAll(kBg); }
+void Editor::paint(juce::Graphics& g) {
+    g.fillAll(kBg);
+    if (proc_.hardwareMode() || boxes_.empty() || nativeW_ <= 0) return;
+    g.addTransform(juce::AffineTransform::scale(float(getWidth()) / float(nativeW_)));   // as the children
+    for (size_t i = 0; i < boxes_.size(); i++) {
+        auto box = boxes_[i].toFloat();
+        g.setColour(juce::Colour(0xff25282c));
+        g.fillRoundedRectangle(box, 6.0f);
+        g.setColour(juce::Colour(0xff3a3e43));
+        g.drawRoundedRectangle(box.reduced(0.5f), 6.0f, 1.0f);
+        g.setColour(kText);
+        g.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+        g.drawText(groups_[i], boxes_[i].withHeight(kBoxHead).reduced(kBoxInset, 0), juce::Justification::centredLeft);
+    }
+}
 
 void Editor::resized() {
     if (nativeW_ <= 0 || nativeH_ <= 0) return;
     const float scale = float(getWidth()) / float(nativeW_);
     proc_.editorScale = scale;
     layoutNative();
+    repaint();   // the boxes
     // The resize corner is placed by JUCE in window coordinates, so it stays unscaled.
     for (auto* c : getChildren())
         if (c != &tooltips_ && c != resizableCorner.get()) c->setTransform(juce::AffineTransform::scale(scale));
@@ -184,14 +218,42 @@ void Editor::layoutNative() {
     b.removeFromTop(8);
     panel_.setBounds(b.removeFromTop(52));
     b.removeFromTop(12);
-    for (auto& r : rows_) {
-        auto row = b.removeFromTop(kRowH);
-        r->name.setBounds(row.removeFromLeft(kNameW));
-        r->readout.setBounds(row.removeFromRight(kReadW));
-        if (r->sync) r->sync->setBounds(row.removeFromRight(76).reduced(2, 3));
+    auto place = [](Row& r, juce::Rectangle<int> row, int nameW) {
+        r.name.setBounds(row.removeFromLeft(nameW));
+        r.readout.setBounds(row.removeFromRight(kReadW));
+        if (r.sync) r.sync->setBounds(row.removeFromRight(76).reduced(2, 3));
         auto c = row.reduced(6, 3);
-        if (r->toggle) c = c.withWidth(40);
-        r->control()->setBounds(c);
+        if (r.toggle) c = c.withWidth(40);
+        r.control()->setBounds(c);
+    };
+    boxes_.clear();
+    if (groups_.empty()) {
+        for (auto& r : rows_) place(*r, b.removeFromTop(kRowH), kNameW);
+    } else {
+        // the boxes side by side, then the shared controls in as many columns, top to bottom
+        const int g = int(groups_.size());
+        auto rows = b.removeFromTop(easyHeight());
+        std::vector<int> n(size_t(g), 0);
+        std::vector<Row*> shared;
+        for (auto& r : rows_) r->group >= 0 ? (void)n[size_t(r->group)]++ : shared.push_back(r.get());
+        auto area = rows.removeFromTop(kBoxHead + *std::max_element(n.begin(), n.end()) * kRowH + kBoxFoot);
+        for (int k = 0; k < g; k++) {
+            auto box = area.removeFromLeft(kBoxW);
+            area.removeFromLeft(kGap);
+            boxes_.push_back(box);
+            auto in = box.reduced(kBoxInset, 0);
+            in.removeFromTop(kBoxHead);
+            for (auto& r : rows_)
+                if (r->group == k) place(*r, in.removeFromTop(kRowH), kBoxNameW);
+        }
+        rows.removeFromTop(12);
+        const int per = (int(shared.size()) + g - 1) / g;
+        for (int k = 0; k < g; k++) {
+            auto col = rows.removeFromLeft(kBoxW).reduced(kBoxInset, 0);
+            rows.removeFromLeft(kGap);
+            for (int j = k * per; j < std::min(int(shared.size()), (k + 1) * per); j++)
+                place(*shared[size_t(j)], col.removeFromTop(kRowH), kNameW);
+        }
     }
     b.removeFromTop(12);
     auto bar = b.removeFromTop(28);
