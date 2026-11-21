@@ -95,6 +95,7 @@ void Processor::findRomsAtStart() {
         romPaths_ = remembered;
     } else {
         status_ = juce::String("no ROMs: choose or drop the files (or set ") + type_.info.rom_env + ")";
+        statusOk_ = false;
         return;
     }
     boot({});
@@ -125,11 +126,13 @@ void Processor::loadRoms(const juce::StringArray& paths) {
     RomSet set;
     if (!readRoms(paths, set) || !set.complete()) {
         status_ = "not loaded: " + juce::String(set.describe(type_.info.roms));
+        statusOk_ = false;
         return;
     }
     std::string err;
     if (!type_.boot(set, {}, &err)) {   // try it before forgetting the old set
         status_ = "cannot run: " + juce::String(err);
+        statusOk_ = false;
         return;
     }
     roms_ = set;
@@ -145,11 +148,13 @@ void Processor::boot(const std::string& state) {
     auto m = type_.boot(roms_, state, &err);
     if (!m) {
         status_ = "cannot run: " + juce::String(err);
+        statusOk_ = false;
         return;
     }
     host_->install(std::move(m));
     setLatencySamples(int(host_->latency()));
     status_ = juce::String(roms_.describe(type_.info.roms));
+    statusOk_ = true;
 }
 
 const juce::StringArray& Processor::syncChoices() {

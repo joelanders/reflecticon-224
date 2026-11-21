@@ -45,6 +45,7 @@ public:
     // Files or folders; boots on success and remembers the paths for new instances.
     void loadRoms(const juce::StringArray& paths);
     juce::String status() const { return status_; }
+    bool statusOk() const { return statusOk_; }   // running on a full ROM set; status() names it
     // Set the parameters from a machine preset, as one gesture each (hosts record it).
     void applyPreset(const Preset& p);
     // The editor shown: true = the hardware panel (only if the machine has one). Saved with the
@@ -79,6 +80,7 @@ private:
     RomSet roms_;
     juce::StringArray romPaths_;
     juce::String status_ = "no ROMs";
+    bool statusOk_ = false;
     std::unique_ptr<juce::PropertiesFile> settings_;
     juce::AudioBuffer<float> scratch_;   // the mono mix, and a copy of a mono input
     static constexpr int kDryRing = 1 << 16;   // the dry signal, delayed by the latency for the mix

@@ -110,11 +110,11 @@ public:
         o.param[Input] = fmt("%.1f", v_[Input]);
         o.param[InputMute] = c.input_mute ? "muted" : "off";
         o.param[ReverbMix] = fmt("%.2f", c.reverb_mix);
-        o.param[DirectMix] = fmt("%.2f", c.direct_mix);
+        o.param[DirectMix] = c.dry_only ? std::string("1.00 (dry only)") : fmt("%.2f", c.direct_mix);
         o.param[Modulation] = c.modulation ? "on" : "off";
         o.param[Hiss] = c.hiss_nv > 0 ? "on" : "off";
-        o.param[DryOnly] = c.dry_only ? "reverb taps off" : "off";
-        o.param[ReverbClear] = c.reverb_clear ? "loop cleared" : "off";
+        o.param[DryOnly] = c.dry_only ? "dry signal only" : "off";
+        o.param[ReverbClear] = c.reverb_clear ? "clearing" : "ready";
         o.param[Unit] = c.deemph_trim != 1.0 ? "de-emphasis 0.95, shelf -0.2 dB" : "design values";
         // the panel: the predelay display and the input level LEDs (the rate-level comparators,
         // which set how fast the modulation runs)
@@ -122,8 +122,8 @@ public:
         std::string leds;
         for (int i = 0; i < 4; i++) leds += (code >> i) & 1 ? "#" : ".";
         o.panel = o.param[Room] + "   " + o.param[Predelay] + "   " + (c.decay == 0 ? std::string("0.0 s") : o.param[Decay]) +
-                  (c.input_mute ? "   INPUT MUTE" : "") + (c.dry_only ? "   DRY ONLY" : "") + (c.reverb_clear ? "   REVERB CLEAR" : "");
-        o.status = "input level " + leds + " (sets the modulation rate)";
+                  "   IN " + leds + (c.input_mute ? "   INPUT MUTE" : "") + (c.dry_only ? "   DRY ONLY" : "") +
+                  (c.reverb_clear ? "   REVERB CLEAR" : "");
         return o;
     }
 
@@ -161,10 +161,10 @@ private:
         c.input_gain = kInputTop * std::clamp(double(v[Input]), 0.0, 10.0) / 10.0;
         c.input_mute = v[InputMute] > 0.5f;
         c.reverb_mix = v[ReverbMix];
-        c.direct_mix = v[DirectMix];
+        c.dry_only = v[DryOnly] > 0.5f;
+        c.direct_mix = c.dry_only ? 1.0 : v[DirectMix];   // dry only: the taps off, the direct path full
         c.modulation = v[Modulation] > 0.5f;
         c.hiss_nv = v[Hiss] > 0.5f ? 212.0 : 0.0;
-        c.dry_only = v[DryOnly] > 0.5f;
         c.reverb_clear = v[ReverbClear] > 0.5f;
         if (v[Unit] > 0.5f) {   // ravettel's unit (notes 2026-11-11-0500)
             c.deemph_trim = 0.95;
@@ -228,6 +228,7 @@ kit::Info make_info() {
         {"hiss", "Input hiss", K::Bool, 0, 1, 1, {}, ""},
         {"unit", "Unit", K::Choice, 0, 1, 0, {"design values", "ravettel's unit"}, ""},
     };
+    kit::momentary(i.params, {{"reverbClear", "Clear"}});
     kit::describe(i.params, {
         {"inputLevel",
          "Input level into the reverb. As on the hardware, it also sets the modulation rate."},
@@ -248,9 +249,9 @@ kit::Info make_info() {
         {"inputMute",
          "Mutes the reverb's input: the tail rings out."},
         {"dryOnly",
-         "Outputs the dry signal only."},
+         "Outputs the dry signal only: the reverb taps off and the direct path at full level, whatever Direct mix is set to."},
         {"reverbClear",
-         "Clears the reverb memory, cutting the tail off."},
+         "Hold to clear the reverb memory, cutting the tail off (a click holds it half a second)."},
         {"modulation",
          "Slow delay modulation that smooths the tail's metallic ring."},
         {"hiss",

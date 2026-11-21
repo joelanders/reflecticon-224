@@ -52,6 +52,28 @@ Editor::Editor(Processor& p) : AudioProcessorEditor(p), proc_(p) {
             r->combo = std::make_unique<juce::ComboBox>();
             for (size_t i = 0; i < prm.choices.size(); i++) r->combo->addItem(prm.choices[i], int(i) + 1);
             r->ca = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(proc_.params, prm.id, *r->combo);
+        } else if (prm.kind == Param::Bool && prm.momentary) {
+            // on while held, and for at least half a second (a click still does the job)
+            r->push = std::make_unique<juce::TextButton>(prm.button.empty() ? prm.name : prm.button);
+            auto* param = proc_.params.getParameter(prm.id);
+            auto pressedAt = std::make_shared<juce::uint32>(0);
+            r->push->onStateChange = [b = r->push.get(), param, pressedAt] {
+                const bool down = b->isDown();
+                if (down && param->getValue() < 0.5f) {
+                    *pressedAt = juce::Time::getMillisecondCounter();
+                    param->beginChangeGesture();
+                    param->setValueNotifyingHost(1.0f);
+                } else if (!down && param->getValue() > 0.5f && *pressedAt) {
+                    const auto held = juce::Time::getMillisecondCounter() - *pressedAt;
+                    *pressedAt = 0;
+                    auto release = [param] {
+                        param->setValueNotifyingHost(0.0f);
+                        param->endChangeGesture();
+                    };
+                    if (held >= 500) release();
+                    else juce::Timer::callAfterDelay(int(500 - held), release);
+                }
+            };
         } else if (prm.kind == Param::Bool) {
             r->toggle = std::make_unique<juce::ToggleButton>();
             r->ba = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(proc_.params, prm.id, *r->toggle);
@@ -244,6 +266,7 @@ void Editor::layoutNative() {
         if (r.sync) r.sync->setBounds(row.removeFromRight(76).reduced(2, 3));
         auto c = row.reduced(6, 3);
         if (r.toggle) c = c.withWidth(40);
+        if (r.push) c = c.withWidth(140);
         r.control()->setBounds(c);
     };
     boxes_.clear();
@@ -316,9 +339,12 @@ void Editor::timerCallback() {
         row.name.setAlpha(used ? 1.0f : 0.4f);
         row.control()->setAlpha(used && sc == 0 ? 1.0f : 0.4f);   // the tempo sets it
     }
-    juce::String st = proc_.status();
-    if (!r.status.empty()) st += "  |  " + juce::String(r.status);
+    // only when something needs attention (no ROMs, a ROM problem, the machine's own notes); the
+    // ROM set in use is on the ROM button's tooltip
+    juce::String st = proc_.statusOk() ? juce::String() : proc_.status();
+    if (!r.status.empty()) st += (st.isEmpty() ? "" : "  |  ") + juce::String(r.status);
     status_.setText(st, juce::dontSendNotification);
+    romsButton_.setTooltip(proc_.statusOk() ? "In use: " + proc_.status() : juce::String("Choose the ROM files or their folder, or drop them on the window"));
     if (have && presetList_.empty()) refreshPresets();
     presets_.setVisible(!have || !presetList_.empty());   // machines without factory presets: no menu
 }

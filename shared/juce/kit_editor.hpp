@@ -38,6 +38,7 @@ private:
         std::unique_ptr<juce::Slider> slider;
         std::unique_ptr<juce::ComboBox> combo;
         std::unique_ptr<juce::ToggleButton> toggle;
+        std::unique_ptr<juce::TextButton> push;   // Param::momentary
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sa;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> ca;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> ba;
@@ -45,7 +46,10 @@ private:
         std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncA;
         int group = -1;   // index in groups_, or -1: the shared controls under the boxes
         juce::Component* control() const {
-            return slider ? (juce::Component*)slider.get() : combo ? (juce::Component*)combo.get() : toggle.get();
+            return slider ? (juce::Component*)slider.get()
+                   : combo ? (juce::Component*)combo.get()
+                   : push  ? (juce::Component*)push.get()
+                           : toggle.get();
         }
     };
 
